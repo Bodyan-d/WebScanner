@@ -1,0 +1,35 @@
+# docker-compose.yml
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend/app:/app/app
+      - ./backend/data:/app/data
+      - ./scan_results:/tmp/scan_reports
+    environment:
+      - USE_SQLMAP=true
+      - SQLMAP_CONTAINER_NAME=sqlmap
+      - SQLMAP_IMAGE=spsproject-sqlmap:latest   
+    depends_on:
+      - sqlmap
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  sqlmap:
+    build:
+      context: ./sqlmap
+      dockerfile: Dockerfile
+    image: spsproject-sqlmap:latest   
+    container_name: sqlmap
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./sqlmap-results:/root/.sqlmap
