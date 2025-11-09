@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+aiohttp
+beautifulsoup4
+lxml
+aiohttp-retry
+python-dotenv
+sqlalchemy
+databases
+jinja2
+pydantic
+dotenv
+aiosqlite
+docker

@@ -1,0 +1,54 @@
+{
+  "target": "https://example.com/",
+  "generated": "20251102T170004Z",
+  "results": {
+    "ports": {
+      "tcp": {
+        "80": true,
+        "443": true,
+        "21": false,
+        "22": false,
+        "25": false,
+        "53": false,
+        "110": false,
+        "143": false,
+        "3306": false,
+        "5432": false,
+        "8000": false,
+        "8080": false,
+        "8443": false
+      }
+    },
+    "crawl": {
+      "urls": [
+        "https://example.com"
+      ],
+      "forms": []
+    },
+    "headers": {
+      "present": {
+        "Accept-Ranges": "bytes",
+        "Content-Type": "text/html",
+        "Etag": "\"bc2473a18e003bdb249eba5ce893033f:1760028122.592274\"",
+        "Last-Modified": "Thu, 09 Oct 2025 16:42:02 GMT",
+        "Vary": "Accept-Encoding",
+        "Content-Encoding": "gzip",
+        "Content-Length": "363",
+        "Cache-Control": "max-age=86000",
+        "Date": "Sun, 02 Nov 2025 17:00:04 GMT",
+        "Connection": "keep-alive",
+        "Alt-Svc": "h3=\":443\"; ma=93600"
+      },
+      "missing": [
+        "Content-Security-Policy",
+        "X-Frame-Options",
+        "Strict-Transport-Security",
+        "X-Content-Type-Options",
+        "Referrer-Policy"
+      ]
+    },
+    "xss": [],
+    "sqli": [],
+    "sqlmap": null
+  }
+}
