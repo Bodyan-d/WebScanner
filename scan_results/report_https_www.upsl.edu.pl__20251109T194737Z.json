@@ -1,0 +1,588 @@
+{
+  "target": "https://www.upsl.edu.pl/",
+  "generated": "20251109T194737Z",
+  "results": {
+    "ports": {
+      "tcp": {
+        "80": true,
+        "443": true,
+        "21": false,
+        "22": false,
+        "25": false,
+        "53": false,
+        "110": false,
+        "143": false,
+        "3306": false,
+        "5432": false,
+        "8000": false,
+        "8080": false,
+        "8443": false
+      }
+    },
+    "crawl": {
+      "urls": [
+        "https://www.upsl.edu.pl/aktualnosci-serwisu",
+        "https://www.upsl.edu.pl/ksztalcenie/polityka-jakosci-ksztalcenia/system-zarzadzania-jakoscia-ksztalcenia",
+        "https://www.upsl.edu.pl/nauka/komercjalizacja/zrealizowane-projekty",
+        "https://www.upsl.edu.pl/kalendarz-wydarzen/projekt-potential-finansowany-przez-eit-food",
+        "https://www.upsl.edu.pl/studium-wychowania-fizycznego-i-sportu/aktualnosci-swfis",
+        "https://www.upsl.edu.pl/nauka/dzien-nauki-i-sportu2/dla-organizatorow",
+        "https://www.upsl.edu.pl/nauka/komercjalizacja/zakres-przedmiotowy-komercjalizacji",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/zarzadzenia-wewnetrzne",
+        "https://www.upsl.edu.pl/nauka/konferencje/konferencje-w-up",
+        "https://www.upsl.edu.pl/ksztalcenie/doskonalenie-kompetencji-nauczycieli-akademickich/studia-podyplomowe-z-zakresu-dydaktyki-szkoly-wyzszej",
+        "https://www.upsl.edu.pl/biblioteka-uniwersytetu-pomorskiego-w-slupsku/aktualnosci/programy-publikowania-otwartego-wbn",
+        "https://www.upsl.edu.pl/struktura/administracja/biuro-rektora",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/aktualnosci",
+        "https://www.upsl.edu.pl/studenci/plany-zajec/plany",
+        "https://www.upsl.edu.pl/ksztalcenie/doskonalenie-kompetencji-nauczycieli-akademickich/kursy-metodyczne-dla-nauczycieli-i-innych-osob-prowadzacych-zajecia",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/rozwoj-naukowy",
+        "https://www.upsl.edu.pl/o-uczelni/forum-uniwersyteckie",
+        "https://www.upsl.edu.pl/o-uczelni/historia-uniwersytetu-pomorskiego",
+        "https://www.upsl.edu.pl/pracownicy/wzory-dokumentow-nauka",
+        "https://www.upsl.edu.pl/kontakt/praca",
+        "https://www.upsl.edu.pl/oferta/kursy-i-szkolenia/oferta",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/czasopisma-monografie",
+        "https://www.upsl.edu.pl/nauka/habilitacje",
+        "https://www.upsl.edu.pl/wspolpraca/wspolpraca-miedzynarodowa",
+        "https://www.upsl.edu.pl/ksztalcenie/polityka-jakosci-ksztalcenia/kodeks-dobrych-praktyk",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/dodatek-motywacyjny-za-publikacje-wysoko-punktowane",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/iii-mistrzostwa-uniwersytetu-pomorskiego-w-slupsku-o-puchar-jm-rektora-dr-hab.-inz.-zbigniewa-osadowskiego-prof.-up-w-strzelaniu-z-broni-dlugiej-pn",
+        "https://www.upsl.edu.pl/nauka/interdyscyplinarny-inkubator-innowacyjnosci-4.0/aktualnosci",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/uniwersytet-pomorski-w-slupsku-uczestniczy-w-misji-edukacyjnej-w-krolestwie-maroka",
+        "https://www.upsl.edu.pl/doktoraty-habilitacje2/szkola-doktorska/szkola-doktorska-aktualnosci",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-ksztalcenia/aktualnosci",
+        "https://www.upsl.edu.pl/",
+        "https://www.upsl.edu.pl/linki",
+        "https://www.upsl.edu.pl/nauka/uczelniana-komisja-ds.-etyki-badan-naukowych",
+        "https://www.upsl.edu.pl/studenci/biuro-ds.-osob-z-niepelnosprawnosciami/aktualnosci",
+        "https://www.upsl.edu.pl/search?query=",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/uniwersytet-pomorski-w-slupsku-na-targach-edukacyjnych-study-in-poland-w-rabacie",
+        "https://www.upsl.edu.pl/kontakt/przetargi",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/umowy-cywilno-prawne",
+        "https://www.upsl.edu.pl/ksztalcenie/akty-prawne-dot.-jakosci-ksztalcenia",
+        "https://www.upsl.edu.pl/nauka/komercjalizacja/kontakt",
+        "https://www.upsl.edu.pl/struktura/rada-uczelni",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/zewnetrzne-akty-prawne",
+        "https://www.upsl.edu.pl/pracownicy/aktualnosci",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/iii-mistrzostwa-uniwersytetu-pomorskiego-w-slupsku-w-badmintona-w-mikscie",
+        "https://www.upsl.edu.pl/kalendarz-wydarzen/instytut-historii-zaprasza-do-biblioteki-uniwersytetu-na-spotkanie-z-dr-malgorzata-mastalerz-krystjanczuk-gosciem-specjalnym-kolejnego-slupskiego",
+        "https://www.upsl.edu.pl/ksztalcenie/polityka-jakosci-ksztalcenia/cele-i-zasady-pjk",
+        "https://www.upsl.edu.pl/zintegrowany-program-uczelni",
+        "https://www.upsl.edu.pl",
+        "https://www.upsl.edu.pl/mapa-witryny"
+      ],
+      "forms": [
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ]
+      ]
+    },
+    "headers": {
+      "present": {
+        "Date": "Sun, 09 Nov 2025 19:47:45 GMT",
+        "Content-Type": "text/html; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "Connection": "keep-alive",
+        "Vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Encoding",
+        "X-Powered-By": "Next.js",
+        "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "Content-Encoding": "gzip",
+        "Server": "UPSL Server",
+        "Strict-Transport-Security": "max-age=63072000; includeSubdomains; preload",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-XSS-Protection": "1; mode=block",
+        "Access-Control-Allow-Origin": "*",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "missing": [
+        "Content-Security-Policy",
+        "Referrer-Policy"
+      ]
+    },
+    "xss": [
+      {
+        "url": "https://www.upsl.edu.pl/search?query=__WS__1de387a0__",
+        "param": "query",
+        "marker": "__WS__1de387a0__",
+        "reflected": true,
+        "status": 200
+      }
+    ],
+    "sqli": [
+      {
+        "param": "query",
+        "payload": "'",
+        "url": "https://www.upsl.edu.pl/search?query=%27",
+        "suspected": true,
+        "status": 200
+      }
+    ],
+    "sqlmap": null
+  }
+}

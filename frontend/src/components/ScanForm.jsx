@@ -21,7 +21,7 @@ export default function ScanForm({ onStart, onDone, onError }) {
       `--level=${level}`,
       `--risk=${risk}`,
       `--threads=${threads}`,
-      `--crawl=2`,
+      `--crawl=1`,
       "--random-agent",
       "--batch"
     ];

@@ -10,6 +10,6 @@ MAX_CONCURRENCY = int(os.getenv("MAX_CONCURRENCY", "5"))
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/tmp/scan_reports")
 
 USE_SQLMAP = True
-# якщо хочеш використовувати локальний образ, вкажи його:
+
 SQLMAP_IMAGE = os.getenv("SQLMAP_IMAGE", "spsproject-sqlmap:latest")
 

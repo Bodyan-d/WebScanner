@@ -31,7 +31,7 @@ app.add_middleware(
 
 class ScanRequest(BaseModel):
     url: HttpUrl
-    # Типи — просто int, а обмеження робимо через Field -> Pyright/Pylance не скаржиться
+
     max_pages: int = Field(MAX_PAGES_LIMIT, ge=1, le=MAX_PAGES_LIMIT)
     concurrency: int = Field(MAX_CONCURRENCY, ge=1, le=MAX_CONCURRENCY)
     run_sqlmap: bool = False
@@ -50,13 +50,13 @@ def sanitize_sqlmap_args(args: Optional[List[str]]) -> Optional[List[str]]:
         if not isinstance(a, str):
             continue
         a = a.strip()
-        if len(a) == 0 or len(a) > 120:  # обмеження довжини одного аргументу
+        if len(a) == 0 or len(a) > 120:  
             continue
-        # дозволяємо або точні прапорці, або ті, що починаються з дозволених префіксів
+        
         if a in ("--random-agent", "--batch") or any(a.startswith(pref) for pref in ALLOWED_SQLMAP_PREFIXES):
             safe.append(a)
-        # інакше відкидаємо
-        if len(safe) >= 20:  # ліміт кількості аргументів
+        
+        if len(safe) >= 20: 
             break
     return safe or None
 
@@ -110,7 +110,7 @@ async def api_scan(req: ScanRequest):
         # advanced sqlmap scan
     sqlmap_res = None
     if req.run_sqlmap:
-        # --- безпечне витягнення forms з crawl_res ---
+        
         forms = []
 
         # case A: crawl_res is dict with top-level 'forms'
@@ -160,6 +160,7 @@ async def api_scan(req: ScanRequest):
         forms = deduped
         
         extra_args = sanitize_sqlmap_args(req.sqlmap_args)
+        
 
         # run sqlmap with discovered forms (or empty list)
         sqlmap_res = await tester.run_sqlmap_async(

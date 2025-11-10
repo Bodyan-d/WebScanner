@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import json
+import sys
 import urllib.parse
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse, urlunparse
@@ -8,11 +9,17 @@ from urllib.parse import urlparse, urlunparse
 from .fetcher import Fetcher
 from .config import USE_SQLMAP, SQLMAP_IMAGE, SQLMAP_CONTAINER_NAME
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger(__name__)
+
 
 BASIC_PAYLOADS = ["'", "\"", " OR 1=1 -- "]
 
-# Safe import of docker SDK
+
 try:
     import docker
     from docker.errors import ContainerError, ImageNotFound, APIError
@@ -122,118 +129,112 @@ class SQLiTester:
         - extra_args: list of additional sqlmap args (overrides defaults).
         - forms: optional list of forms discovered by crawler (to test POST bodies / JSON).
         """
+
+        logger.info("sqli_tester: EXTRA ARGS: %r", extra_args)
         if not USE_SQLMAP:
             return {"ok": False, "error": "sqlmap disabled (USE_SQLMAP=False)"}
 
-        # rewrite localhost for container if needed
         safe_url = _rewrite_localhost_for_container(url)
 
-        # sensible defaults for deeper scanning; can be overridden by extra_args
         defaults = [
             "--batch",
             "--random-agent",
             "--level=3",
             "--risk=2",
             "--threads=5",
-            "--crawl=2",  # if you want crawler depth in sqlmap
         ]
 
-        # Start constructing args — we will pass only args array (image has ENTRYPOINT)
-        # Insert URL first as '-u <url>'
-        args: List[str] = []
-        if extra_args:
-            # allow explicit override from UI/backend caller
-            args = list(extra_args)
-        else:
-            args = list(defaults)
+        # Use extra_args if given, otherwise defaults
+        args: List[str] = list(extra_args) if extra_args else list(defaults)
+        logger.info("sqli_tester: ARGS: %r", args)
 
-        # If crawler found forms, try to add a first POST payload (safe test values)
-        if forms:
-            # normalize forms: accept dicts, tuples (url, dict) or lists
-            normalized_forms: List[Dict[str, Any]] = []
-            
-            
-        if forms:
-            normalized_forms: List[Dict[str, Any]] = []
+        # --- Helper: normalize a single raw form element into a dict ---
+        def _normalize_one(raw: Any) -> Optional[Dict[str, Any]]:
+            try:
+                if isinstance(raw, dict):
+                    return cast(Dict[str, Any], raw)
 
-            # Defensive: forms may be typed Optional[List[Dict[str,Any]]] but at runtime elements can be tuple/list/dict
-            for raw in forms:
-                try:
-                    # Case A: already a dict -> accept
-                    if isinstance(raw, dict):
-                        normalized_forms.append(cast(Dict[str, Any], raw))
-                        continue
+                if isinstance(raw, (tuple, list)):
+                    # case: (url, dict)
+                    if len(raw) == 2 and isinstance(raw[1], dict):
+                        url_part = raw[0]
+                        if not isinstance(url_part, str):
+                            url_part = str(url_part)
+                        nf: Dict[str, Any] = {"url": url_part}
+                        nf.update(raw[1])
+                        return nf
 
-                    # Case B: tuple/list shape -> handle safely (no unpack before checks)
-                    if isinstance(raw, (tuple, list)):
-                        if len(raw) == 2 and isinstance(raw[1], dict):
-                            url_part = raw[0]  # safe — we checked it's a tuple/list
-                            fdict = raw[1]
-                            # make sure url_part is a string
-                            if not isinstance(url_part, str):
-                                url_part = str(url_part)
-                            nf: Dict[str, Any] = {"url": url_part}
-                            nf.update(fdict)
-                            normalized_forms.append(nf)
-                            continue
+                    # case: (url, method_or_dict, ...)
+                    if len(raw) >= 2 and isinstance(raw[0], str):
+                        second = raw[1]
+                        if isinstance(second, dict):
+                            nf = {"url": raw[0]}
+                            nf.update(second)
+                            return nf
 
-                        # Sometimes crawler returns (url, method, inputs) or similar:
-                        if len(raw) >= 2 and isinstance(raw[0], str) and isinstance(raw[1], (dict, str)):
-                            # try best-effort: if second element is dict, merge; else skip
-                            if isinstance(raw[1], dict):
-                                nf = {"url": raw[0]}
-                                nf.update(raw[1])
-                                normalized_forms.append(nf)
-                                continue
+                # unknown shape
+                logger.debug("sqli_tester: skipping unknown form shape: %r", raw)
+                return None
+            except Exception:
+                logger.exception("sqli_tester: failed to normalize form: %r", raw)
+                return None
 
-                    # Unknown shape: skip but log for debugging
-                    logger.debug("sqli_tester: skipping unknown form shape: %r", raw)
+        # --- Helper: prepare args for a POST form dict (first suitable) ---
+        def _prepare_post_args_from_form(form: Dict[str, Any]) -> List[str]:
+            added: List[str] = []
+            try:
+                method = str(form.get("method", "get")).lower()
+                if method != "post":
+                    return []
 
-                except Exception:
-                    logger.exception("sqli_tester: failed to normalize form: %r", raw)
+                inputs = form.get("inputs") or {}
+                if not isinstance(inputs, dict):
+                    try:
+                        inputs = dict(inputs)
+                    except Exception:
+                        inputs = {}
 
-            # prefer a POST form with inputs
-            for form in normalized_forms:
-                try:
-                    # safe access (form is dict here)
-                    method = str(form.get("method", "get")).lower()
-                    if method != "post":
-                        continue
+                enctype = str(form.get("enctype", "application/x-www-form-urlencoded")).lower()
 
-                    inputs = form.get("inputs") or {}
-                    # normalize inputs to a dict if possible
-                    if not isinstance(inputs, dict):
-                        try:
-                            inputs = dict(inputs)  # may raise if not iterable of pairs
-                        except Exception:
-                            inputs = {}
-
-                    enctype = str(form.get("enctype", "application/x-www-form-urlencoded")).lower()
-
-                    # prepare test data (use simple 'test' value)
-                    if "json" in enctype:
-                        try:
-                            data_obj = {k: "test" for k in inputs.keys()}
-                            args += ["--data", json.dumps(data_obj)]
-                            args += ["--headers", "Content-Type: application/json"]
-                        except Exception:
-                            data = "&".join(f"{k}={urllib.parse.quote_plus('test')}" for k in inputs.keys())
-                            args += ["--data", data]
-                    else:
+                if "json" in enctype:
+                    try:
+                        data_obj = {k: "test" for k in inputs.keys()}
+                        added += ["--data", json.dumps(data_obj)]
+                        added += ["--headers", "Content-Type: application/json"]
+                    except Exception:
+                        # fallback to urlencoded
                         data = "&".join(f"{k}={urllib.parse.quote_plus('test')}" for k in inputs.keys())
-                        args += ["--data", data]
+                        added += ["--data", data]
+                else:
+                    data = "&".join(f"{k}={urllib.parse.quote_plus('test')}" for k in inputs.keys())
+                    added += ["--data", data]
 
-                    # attached first suitable POST form only
-                    break
+                return added
+            except Exception:
+                logger.exception("sqli_tester: failed to prepare data for form %r", form)
+                return []
 
-                except Exception:
-                    logger.exception("sqli_tester: failed to prepare data for form %r", form)
+        # If forms provided, normalize and try to attach the first suitable POST
+        if forms:
+            normalized: List[Dict[str, Any]] = []
+            for raw in forms:
+                nf = _normalize_one(raw)
+                if nf:
+                    normalized.append(nf)
 
-        # final args: ensure '-u' is present at beginning
+            for form in normalized:
+                post_args = _prepare_post_args_from_form(form)
+                if post_args:
+                    args += post_args
+                    break  # attach only the first suitable POST form
+
+        # Ensure '-u' is at the start (sqlmap image ENTRYPOINT expects args only)
         final_args = ["-u", safe_url] + args
+        logger.info("sqli_tester: FINAL sqlmap args: %r", final_args)
 
         # run blocking in thread
         return await asyncio.to_thread(self._run_sqlmap_container, final_args, timeout)
+
 
     def _run_sqlmap_container(self, cmd_args: List[str], timeout: int) -> Dict[str, Any]:
         """
@@ -312,7 +313,6 @@ def run_sqlmap_sync_direct(url: str, extra_args: Optional[List[str]] = None, for
             "--level=3",
             "--risk=2",
             "--threads=5",
-            "--crawl=2",
         ]
         args = list(extra_args) if extra_args else defaults
 

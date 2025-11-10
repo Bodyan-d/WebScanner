@@ -14,5 +14,5 @@ else
   echo "DB already exists at $DB_FILE"
 fi
 
-# Запускаємо кінцеву команду (uvicorn) з CMD
+
 exec "$@"
