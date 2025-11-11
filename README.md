@@ -23,7 +23,7 @@
 
 ## Opis projektu
 
-**WebScanner** to asynchroniczna aplikacja (backend + frontend), która wykonuje szybki audyt wybranej witryny [WWW](http://WWW). Główne zadania:
+**WebScanner** to asynchroniczna aplikacja (backend + frontend), która wykonuje audyt wybranej witryny [WWW](http://WWW). Główne zadania:
 
 * crawluje witrynę (zbiera linki i formularze),
 * skanuje porty (nmap lub proste skany TCP),
@@ -32,7 +32,7 @@
 * opcjonalnie uruchamia `sqlmap` w kontenerze Docker dla głębszej analizy,
 * generuje raport i zapisuje wyniki w bazie danych.
 
-Projekt jest przeznaczony jako narzędzie do szybkiego audytu i prototypowania — nie zastępuje pełnych testów penetracyjnych.
+Projekt jest przeznaczony jako narzędzie do audytu i prototypowania — nie zastępuje pełnych testów penetracyjnych.
 
 ---
 
@@ -51,9 +51,9 @@ Projekt jest przeznaczony jako narzędzie do szybkiego audytu i prototypowania �
 
 ## Technologie
 
-* **Backend:** Python 3.11, FastAPI, aiohttp, asyncio
+* **Backend:** Python 3.11, FastAPI, aiohttp, asyncio, pathlib, urllib
 * **Parser HTML:** BeautifulSoup (lxml)
-* **Baza / ORM:** SQLAlchemy
+* **Baza / ORM:** SQLAlchemy, databases
 * **Narzędzia zewnętrzne:** sqlmap (Docker)
 * **Frontend:** React (Vite)
 * **Orkiestracja:** Docker / docker-compose
