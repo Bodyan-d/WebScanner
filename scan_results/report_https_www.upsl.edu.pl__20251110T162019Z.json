@@ -1,0 +1,729 @@
+{
+  "target": "https://www.upsl.edu.pl/",
+  "generated": "20251110T162019Z",
+  "results": {
+    "ports": {
+      "tcp": {
+        "80": true,
+        "443": true,
+        "21": false,
+        "22": false,
+        "25": false,
+        "53": false,
+        "110": false,
+        "143": false,
+        "3306": false,
+        "5432": false,
+        "8000": false,
+        "8080": false,
+        "8443": false
+      }
+    },
+    "crawl": {
+      "urls": [
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/sekcja-ds.-funduszy-zewnetrznych",
+        "https://www.upsl.edu.pl/o-uczelni/galerie/galeria-2019",
+        "https://www.upsl.edu.pl/studenci/plany-zajec/plany",
+        "https://www.upsl.edu.pl/nauka/przydatne-linki",
+        "https://www.upsl.edu.pl/oferta/ksztalcenie-na-odleglosc",
+        "https://www.upsl.edu.pl/stowarzyszenie-absolwentow-i-pracownikow/ogloszenia",
+        "https://www.upsl.edu.pl/kalendarz-wydarzen",
+        "https://www.upsl.edu.pl/studenci/aktualnosci/karta-rabatowa-znizak",
+        "https://www.upsl.edu.pl/kalendarz-wydarzen/instytut-filologii-uniwersytetu-pomorskiego-w-slupsku-zaprasza-na-spotkanie-z-arturem-danielem-liskowackim-prozaikiem-poeta-eseista-autorem-sl",
+        "https://www.upsl.edu.pl/oferta/biuro-karier/kontakt",
+        "https://www.upsl.edu.pl/ksztalcenie/jakosc-ksztalcenia-na-studiach-podyplomowych",
+        "https://www.upsl.edu.pl/kontakt/ochrona-danych-osobowych",
+        "https://www.upsl.edu.pl",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-ksztalcenia/studia-podyplomowe",
+        "https://www.upsl.edu.pl/oferta/dzialania-prospoleczne/uniwersytet-dla-dzieci",
+        "https://www.upsl.edu.pl/kontakt/kontakt",
+        "https://www.upsl.edu.pl/zintegrowany-program-uczelni",
+        "https://www.upsl.edu.pl/ksztalcenie/procedury/schemat-procedury",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/uniwersytet-pomorski-w-slupsku-uczestniczy-w-misji-edukacyjnej-w-krolestwie-maroka",
+        "https://www.upsl.edu.pl/linki",
+        "https://www.upsl.edu.pl/struktura/archiwum-uczelniane",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/umowy-cywilno-prawne",
+        "https://www.upsl.edu.pl/o-uczelni/galerie/galeria",
+        "https://www.upsl.edu.pl/struktura/administracja",
+        "https://www.upsl.edu.pl/nauka/aktualnosci",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/zewnetrzne-akty-prawne",
+        "https://www.upsl.edu.pl/nauka/dzien-nauki-i-sportu2/media",
+        "https://www.upsl.edu.pl/o-uczelni/forum-uniwersyteckie",
+        "https://www.upsl.edu.pl/search?query=",
+        "https://www.upsl.edu.pl/nauka/komercjalizacja/zrealizowane-projekty",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/dodatek-motywacyjny-za-publikacje-wysoko-punktowane",
+        "https://www.upsl.edu.pl/kontakt/praca",
+        "https://www.upsl.edu.pl/kalendarz-grantowy",
+        "https://www.upsl.edu.pl/oferta/kursy-i-szkolenia/oferta",
+        "https://www.upsl.edu.pl/o-uczelni/whsz",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/projekt-5plus",
+        "https://www.upsl.edu.pl/kalendarz-wydarzen/technologie-ktore-zmieniaja-swiat",
+        "https://www.upsl.edu.pl/doktoraty-habilitacje2/szkola-doktorska",
+        "https://www.upsl.edu.pl/struktura/administracja/biuro-rektora",
+        "https://www.upsl.edu.pl/studenci/biuro-ds.-osob-z-niepelnosprawnosciami/aktualnosci",
+        "https://www.upsl.edu.pl/pracownicy/aktualnosci",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/projekt-herbarium",
+        "https://www.upsl.edu.pl/kontakt/deklaracja-dostepnosci",
+        "https://www.upsl.edu.pl/studenci/aktualnosci",
+        "https://www.upsl.edu.pl/ksztalcenie/polityka-jakosci-ksztalcenia/system-zarzadzania-jakoscia-ksztalcenia",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-rozwoju-i-wspolpracy",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/uniwersytet-pomorski-w-slupsku-na-targach-edukacyjnych-study-in-poland-w-rabacie",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/czasopisma-monografie",
+        "https://www.upsl.edu.pl/wspolpraca/wspolpraca-miedzynarodowa",
+        "https://www.upsl.edu.pl/doktoraty-habilitacje2/szkola-doktorska/szkola-doktorska-aktualnosci",
+        "https://www.upsl.edu.pl/nauka/habilitacje"
+      ],
+      "forms": [
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ]
+      ]
+    },
+    "headers": {
+      "present": {
+        "Date": "Mon, 10 Nov 2025 16:18:53 GMT",
+        "Content-Type": "text/html; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "Connection": "keep-alive",
+        "Vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Encoding",
+        "X-Powered-By": "Next.js",
+        "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "Content-Encoding": "gzip",
+        "Server": "UPSL Server",
+        "Strict-Transport-Security": "max-age=63072000; includeSubdomains; preload",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-XSS-Protection": "1; mode=block",
+        "Access-Control-Allow-Origin": "*",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "missing": [
+        "Content-Security-Policy",
+        "Referrer-Policy"
+      ]
+    },
+    "xss": [
+      {
+        "url": "https://www.upsl.edu.pl/search?query=__WS__34ee2a6f__",
+        "param": "query",
+        "marker": "__WS__34ee2a6f__",
+        "reflected": true,
+        "status": 200,
+        "similarity": 0.8952412747430066
+      }
+    ],
+    "sqli": [
+      {
+        "param": "query",
+        "payload": "'",
+        "url": "https://www.upsl.edu.pl/search?query=%27",
+        "suspected": true,
+        "status": 200
+      }
+    ],
+    "sqlmap": [
+      {
+        "level": "WARNING",
+        "message": "GET parameter 'url' does not appear to be dynamic",
+        "detail": "GET parameter 'url' does not appear to be dynamic",
+        "line": "[16:18:51] [WARNING] GET parameter 'url' does not appear to be dynamic"
+      },
+      {
+        "level": "WARNING",
+        "message": "heuristic (basic) test shows that GET parameter 'url' might not be injectable",
+        "detail": "heuristic (basic) test shows that GET parameter 'url' might not be injectable",
+        "line": "[16:18:52] [WARNING] heuristic (basic) test shows that GET parameter 'url' might not be injectable"
+      },
+      {
+        "level": "INFO",
+        "message": "testing for SQL injection on GET parameter 'url'",
+        "detail": "testing for SQL injection on GET parameter 'url'",
+        "line": "[16:18:52] [INFO] testing for SQL injection on GET parameter 'url'"
+      },
+      {
+        "level": "WARNING",
+        "message": "GET parameter 'url' does not seem to be injectable",
+        "detail": "GET parameter 'url' does not seem to be injectable",
+        "line": "[16:19:17] [WARNING] GET parameter 'url' does not seem to be injectable"
+      },
+      {
+        "level": "WARNING",
+        "message": "GET parameter 'w' does not appear to be dynamic",
+        "detail": "GET parameter 'w' does not appear to be dynamic",
+        "line": "[16:19:17] [WARNING] GET parameter 'w' does not appear to be dynamic"
+      },
+      {
+        "level": "WARNING",
+        "message": "heuristic (basic) test shows that GET parameter 'w' might not be injectable",
+        "detail": "heuristic (basic) test shows that GET parameter 'w' might not be injectable",
+        "line": "[16:19:17] [WARNING] heuristic (basic) test shows that GET parameter 'w' might not be injectable"
+      },
+      {
+        "level": "INFO",
+        "message": "testing for SQL injection on GET parameter 'w'",
+        "detail": "testing for SQL injection on GET parameter 'w'",
+        "line": "[16:19:18] [INFO] testing for SQL injection on GET parameter 'w'"
+      },
+      {
+        "level": "WARNING",
+        "message": "GET parameter 'w' does not seem to be injectable",
+        "detail": "GET parameter 'w' does not seem to be injectable",
+        "line": "[16:19:23] [WARNING] GET parameter 'w' does not seem to be injectable"
+      },
+      {
+        "level": "WARNING",
+        "message": "GET parameter 'q' does not appear to be dynamic",
+        "detail": "GET parameter 'q' does not appear to be dynamic",
+        "line": "[16:19:23] [WARNING] GET parameter 'q' does not appear to be dynamic"
+      },
+      {
+        "level": "WARNING",
+        "message": "heuristic (basic) test shows that GET parameter 'q' might not be injectable",
+        "detail": "heuristic (basic) test shows that GET parameter 'q' might not be injectable",
+        "line": "[16:19:23] [WARNING] heuristic (basic) test shows that GET parameter 'q' might not be injectable"
+      },
+      {
+        "level": "INFO",
+        "message": "testing for SQL injection on GET parameter 'q'",
+        "detail": "testing for SQL injection on GET parameter 'q'",
+        "line": "[16:19:23] [INFO] testing for SQL injection on GET parameter 'q'"
+      },
+      {
+        "level": "WARNING",
+        "message": "GET parameter 'q' does not seem to be injectable",
+        "detail": "GET parameter 'q' does not seem to be injectable",
+        "line": "[16:19:29] [WARNING] GET parameter 'q' does not seem to be injectable"
+      },
+      {
+        "level": "ERROR",
+        "message": "all tested parameters do not appear to be injectable",
+        "detail": "all tested parameters do not appear to be injectable. Try to increase values for '--level'/'--risk' options if you wish to perform more tests. If you suspect that there is some kind of protection mechanism involved (e.g. WAF) maybe you could try to use option '--tamper' (e.g. '--tamper=space2comment'), skipping to the next target",
+        "line": "[16:19:29] [ERROR] all tested parameters do not appear to be injectable. Try to increase values for '--level'/'--risk' options if you wish to perform more tests. If you suspect that there is some kind of protection mechanism involved (e.g. WAF) maybe you could try to use option '--tamper' (e.g. '--tamper=space2comment'), skipping to the next target"
+      },
+      {
+        "level": "WARNING",
+        "message": "HTTP error codes detected during run:",
+        "detail": "HTTP error codes detected during run:",
+        "line": "[16:19:29] [WARNING] HTTP error codes detected during run:"
+      },
+      {
+        "level": "WARNING",
+        "message": "reflective value(s) found and filtering out",
+        "detail": "reflective value(s) found and filtering out",
+        "line": "[16:19:31] [WARNING] reflective value(s) found and filtering out"
+      },
+      {
+        "level": "WARNING",
+        "message": "target URL content is not stable (i",
+        "detail": "target URL content is not stable (i.e. content differs). sqlmap will base the page comparison on a sequence matcher. If no dynamic nor injectable parameters are detected, or in case of junk results, refer to user's manual paragraph 'Page comparison'",
+        "line": "[16:19:32] [WARNING] target URL content is not stable (i.e. content differs). sqlmap will base the page comparison on a sequence matcher. If no dynamic nor injectable parameters are detected, or in case of junk results, refer to user's manual paragraph 'Page comparison'"
+      },
+      {
+        "level": "WARNING",
+        "message": "heuristic (basic) test shows that GET parameter 'query' might not be injectable",
+        "detail": "heuristic (basic) test shows that GET parameter 'query' might not be injectable",
+        "line": "[16:19:35] [WARNING] heuristic (basic) test shows that GET parameter 'query' might not be injectable"
+      },
+      {
+        "level": "INFO",
+        "message": "testing for SQL injection on GET parameter 'query'",
+        "detail": "testing for SQL injection on GET parameter 'query'",
+        "line": "[16:19:37] [INFO] testing for SQL injection on GET parameter 'query'"
+      },
+      {
+        "level": "OTHER",
+        "message": "it looks like the back-end DBMS is 'CrateDB'",
+        "detail": "it looks like the back-end DBMS is 'CrateDB'. Do you want to skip test payloads specific for other DBMSes? [Y/n] Y",
+        "line": "it looks like the back-end DBMS is 'CrateDB'. Do you want to skip test payloads specific for other DBMSes? [Y/n] Y"
+      },
+      {
+        "level": "INFO",
+        "message": "automatically extending ranges for UNION query injection technique tests as there is at least one other (potential) technique found",
+        "detail": "automatically extending ranges for UNION query injection technique tests as there is at least one other (potential) technique found",
+        "line": "[16:19:56] [INFO] automatically extending ranges for UNION query injection technique tests as there is at least one other (potential) technique found"
+      },
+      {
+        "level": "INFO",
+        "message": "checking if the injection point on GET parameter 'query' is a false positive",
+        "detail": "checking if the injection point on GET parameter 'query' is a false positive",
+        "line": "[16:20:17] [INFO] checking if the injection point on GET parameter 'query' is a false positive"
+      },
+      {
+        "level": "WARNING",
+        "message": "false positive or unexploitable injection point detected",
+        "detail": "false positive or unexploitable injection point detected",
+        "line": "[16:20:19] [WARNING] false positive or unexploitable injection point detected"
+      },
+      {
+        "level": "WARNING",
+        "message": "GET parameter 'query' does not seem to be injectable",
+        "detail": "GET parameter 'query' does not seem to be injectable",
+        "line": "[16:20:19] [WARNING] GET parameter 'query' does not seem to be injectable"
+      }
+    ]
+  }
+}

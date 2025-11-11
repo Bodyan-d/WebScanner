@@ -31,7 +31,7 @@ export default function App() {
           }}
         />
 
-        {loading && <div className="notify">Scan running — this may take a minute...</div>}
+        {loading && <div className="notify">Scan running — this may take some time...</div>}
         {error && <div className="error">Error: {String(error)}</div>}
 
         {report && (

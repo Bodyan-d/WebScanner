@@ -3,6 +3,7 @@ import asyncio
 import json
 import sys
 import urllib.parse
+import re
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse, urlunparse
 
@@ -139,6 +140,8 @@ class SQLiTester:
         defaults = [
             "--batch",
             "--random-agent",
+            "--smart",
+            "--flush-session",
             "--level=3",
             "--risk=2",
             "--threads=5",
@@ -291,6 +294,126 @@ class SQLiTester:
         except Exception as exc:
             logger.exception("Unexpected error when running sqlmap container")
             return {"ok": False, "error": str(exc)}
+        
+    def _parse_sqlmap_output(self, raw: str) -> List[Dict[str, Any]]:
+        """
+        Парсить stdout sqlmap і повертає лише реальні знахідки про вразливості.
+        Фільтрує службові INFO/WARNING повідомлення.
+        """
+        if not raw:
+            return []
+
+        findings: List[Dict[str, Any]] = []
+        seen = set()
+
+        # ключові фрази, які в sqlmap зазвичай означають *справжню уразливість*
+        confirmed_keywords = (
+            "is vulnerable",
+            "is injectable",
+            "sql injection vulnerability",
+            "identified the following injection point",
+            "back-end dbms",
+            "parameter",
+            "payload:",
+            "type: boolean-based blind",
+            "type: error-based",
+            "type: time-based",
+            "the back-end dbms",
+        )
+
+        # фрази, які хочемо проігнорувати (тести, мережеві попередження і т.п.)
+        ignore_keywords = (
+            "testing",
+            "trying",
+            "could not",
+            "connection",
+            "resuming",
+            "parameter(s) not found",
+            "all tested parameters",
+            "fetched data logged",
+            "starting",
+            "ending",
+            "check",
+            "info",
+            "enumerating",
+            "payload value used",
+            "http error",
+            "unknown",
+            "possible",
+        )
+
+        line_re = re.compile(
+            r'^(?:\[\d{2}:\d{2}:\d{2}\]\s*)?\[(?P<level>[A-Z]+)\]\s*(?P<msg>.*)$'
+        )
+
+        for raw_line in raw.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            m = line_re.match(line)
+            if m:
+                lvl = m.group("level")
+                msg = m.group("msg").strip()
+            else:
+                lvl = "OTHER"
+                msg = line
+
+            low = msg.lower()
+
+            # ігноруємо службові або нецікаві повідомлення
+            if any(k in low for k in ignore_keywords):
+                continue
+
+            # беремо лише ті, де є ознаки справжніх вразливостей
+            if any(k in low for k in confirmed_keywords) or lvl in ("CRITICAL", "ERROR"):
+                key = (lvl, msg)
+                if key in seen:
+                    continue
+                seen.add(key)
+                short = msg.split(".", 1)[0].strip()
+                findings.append({
+                    "level": lvl,
+                    "message": short,
+                    "detail": msg,
+                    "line": line
+                })
+
+        return findings
+    
+    async def run_sqlmap_for_urls(
+        self,
+        urls: List[str],
+        extra_args: Optional[List[str]] = None,
+        forms: Optional[List[Dict[str, Any]]] = None,
+        timeout: int = 600
+    ) -> List[Dict[str, Any]]:
+        """
+        Проганяє sqlmap по списку URL'ів, повертає об’єднаний список знайдених уразливостей.
+        """
+        results = []
+        if not urls:
+            return results
+
+        for url in urls:
+            try:
+                logger.info(f"Running sqlmap on {url}")
+                result = await self.run_sqlmap_async(url, extra_args=extra_args, forms=forms, timeout=timeout)
+                if not result.get("ok"):
+                    logger.warning(f"sqlmap failed on {url}: {result.get('error')}")
+                    continue
+
+                output = result.get("output", "")
+                parsed = self._parse_sqlmap_output(output)
+                if parsed:
+                    for f in parsed:
+                        f["url"] = url
+                    results.extend(parsed)
+
+            except Exception as e:
+                logger.exception(f"Failed to scan {url}: {e}")
+
+        return results
 
 
 # convenience synchronous helper

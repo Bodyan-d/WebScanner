@@ -1,10 +1,12 @@
-import asyncio, os
+import asyncio
 import json
-from fastapi import FastAPI, HTTPException
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union, Sequence, cast
+
+from fastapi import FastAPI
 from pydantic import BaseModel, Field, HttpUrl
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
+
 from .crawler import Crawler
 from .fetcher import Fetcher
 from .port_scanner import tcp_scan, nmap_scan
@@ -20,27 +22,34 @@ from sqlalchemy import insert
 MAX_PAGES_LIMIT = 50
 MAX_CONCURRENCY = 5
 
-app = FastAPI(title='WebScanner API')
+app = FastAPI(title="WebScanner API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*']
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
 
 class ScanRequest(BaseModel):
     url: HttpUrl
-
     max_pages: int = Field(MAX_PAGES_LIMIT, ge=1, le=MAX_PAGES_LIMIT)
     concurrency: int = Field(MAX_CONCURRENCY, ge=1, le=MAX_CONCURRENCY)
     run_sqlmap: bool = False
     sqlmap_args: Optional[List[str]] = None
-    
+
+
 ALLOWED_SQLMAP_PREFIXES = (
-    "--level=", "--risk=", "--threads=", "--crawl=",
-    "--tamper=", "--random-agent", "--batch", "--risk=", "--level="
+    "--level=",
+    "--risk=",
+    "--threads=",
+    "--crawl=",
+    "--tamper=",
+    "--random-agent",
+    "--batch",
 )
+
 
 def sanitize_sqlmap_args(args: Optional[List[str]]) -> Optional[List[str]]:
     if not args:
@@ -50,152 +59,235 @@ def sanitize_sqlmap_args(args: Optional[List[str]]) -> Optional[List[str]]:
         if not isinstance(a, str):
             continue
         a = a.strip()
-        if len(a) == 0 or len(a) > 120:  
+        if not a or len(a) > 160:
             continue
-        
         if a in ("--random-agent", "--batch") or any(a.startswith(pref) for pref in ALLOWED_SQLMAP_PREFIXES):
             safe.append(a)
-        
-        if len(safe) >= 20: 
+        if len(safe) >= 20:
             break
     return safe or None
 
-@app.on_event('startup')
+
+@app.on_event("startup")
 async def startup():
     await database.connect()
 
-@app.on_event('shutdown')
+
+@app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
 
-@app.post('/api/scan')
+
+def _ensure_list_of_str(raw: Any) -> List[str]:
+    """
+    Convert various crawler outputs into list[str].
+    - Accepts list[str], list[dict] (with 'url'), set, etc.
+    - Filters out non-str results.
+    """
+    out: List[str] = []
+    if raw is None:
+        return out
+    if isinstance(raw, (list, set, tuple)):
+        for item in raw:
+            if isinstance(item, str):
+                out.append(item)
+            elif isinstance(item, dict):
+                u = item.get("url") or item.get("action")
+                if isinstance(u, str):
+                    out.append(u)
+    elif isinstance(raw, dict):
+        # maybe crawl_res is dict with 'urls' key
+        u = raw.get("urls")
+        if isinstance(u, (list, set, tuple)):
+            for item in u:
+                if isinstance(item, str):
+                    out.append(item)
+                elif isinstance(item, dict):
+                    uu = item.get("url")
+                    if isinstance(uu, str):
+                        out.append(uu)
+    elif isinstance(raw, str):
+        out.append(raw)
+    return out
+
+
+def _ensure_forms(raw: Any) -> List[Union[Dict[str, Any], list, tuple]]:
+    """
+    Normalize forms into list of dicts/tuples acceptable by XSSTester/SQLiTester.
+    The crawler stores forms as tuples (url, {method, inputs}), so we accept that.
+    """
+    out: List[Union[Dict[str, Any], list, tuple]] = []
+    if not raw:
+        return out
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, dict):
+                out.append(item)
+            elif isinstance(item, (list, tuple)):
+                out.append(item)
+    elif isinstance(raw, dict):
+        # if forms in a dict
+        forms = raw.get("forms")
+        if isinstance(forms, list):
+            for item in forms:
+                if isinstance(item, dict) or isinstance(item, (list, tuple)):
+                    out.append(item)
+    return out
+
+
+@app.post("/api/scan")
 async def api_scan(req: ScanRequest):
     target = str(req.url)
-    parsed = req.url
-    host = parsed.host
+    host = req.url.host
 
-    # --- Ports scan ---
+    # --- Ports (nmap or tcp) ---
     try:
         nmap = nmap_scan(host)
-        if nmap.get('ok'):
-            ports = {'nmap': nmap}
+        if isinstance(nmap, dict) and nmap.get("ok"):
+            ports = {"nmap": nmap}
         else:
             tcp = await tcp_scan(host)
-            ports = {'tcp': tcp}
+            ports = {"tcp": tcp}
     except Exception as e:
-        ports = {'error': str(e)}
+        ports = {"error": str(e)}
 
     # --- Crawl ---
     crawler = Crawler(base_url=target, concurrency=req.concurrency, max_pages=req.max_pages)
-    crawl_res: dict | list | None = await crawler.crawl()
+    crawl_res = await crawler.crawl()  # may be dict {'urls', 'forms'} according to your crawler
 
     # --- Headers ---
     async with aiohttp.ClientSession() as session:
         header_res = await check_headers(session, target)
 
-    # --- XSS ---
+    # --- XSS (use new XSSTester API) ---
+    # Normalize urls for scan_urls
+    urls_raw = None
+    if isinstance(crawl_res, dict):
+        urls_raw = crawl_res.get("urls", [])
+    else:
+        urls_raw = crawl_res  # maybe list
+
+    urls: List[str] = _ensure_list_of_str(urls_raw)
+
     fetcher = Fetcher(concurrency=req.concurrency)
-    xss = await XSSTester(fetcher).scan_urls(crawl_res.get('urls', []))
-    await fetcher.close()
+    xss_tester = XSSTester(fetcher)
+    xss_results = []
+    try:
+        if urls:
+            # we pass only urls that contain query strings — XSSTester will skip others
+            xss_results = await xss_tester.scan_urls(urls, concurrency=min(20, req.concurrency * 2))
+    finally:
+        await fetcher.close()
 
     # --- SQLi (basic + optional sqlmap) ---
     fetcher2 = Fetcher(concurrency=1)
     tester = SQLiTester(fetcher2)
 
-    # simple param-based SQLi tests
-    sqli = []
-    for u in crawl_res.get('urls', []):
-        sqli.extend(await tester.basic_diff(u))
+    sqli_basic: List[Dict[str, Any]] = []
+    # Basic param-based tests over discovered URLs
+    for u in urls:
+        try:
+            sqli_basic.extend(await tester.basic_diff(u))
+        except Exception:
+            continue
 
-        # advanced sqlmap scan
-    sqlmap_res = None
-    if req.run_sqlmap:
+    # --- Advanced sqlmap ---
+    
+    if crawl_res is None:
+        crawl_res = {}
         
-        forms = []
+        
 
-        # case A: crawl_res is dict with top-level 'forms'
+    sqlmap_res = None
+    sqlmap_parsed = None
+    if req.run_sqlmap:
+        # normalize forms found by the crawler
+        forms_raw: List[Any] = []
+
+
         if isinstance(crawl_res, dict):
             maybe = crawl_res.get("forms")
             if isinstance(maybe, list):
-                forms = maybe
+                forms_raw = maybe
             else:
-                # nested under 'crawl' key
                 nested = crawl_res.get("crawl")
                 if isinstance(nested, dict):
                     maybe2 = nested.get("forms")
                     if isinstance(maybe2, list):
-                        forms = maybe2
+                        forms_raw = maybe2
 
-        # case B: crawl_res is a list of page dicts -> collect 'forms' from items
         elif isinstance(crawl_res, list):
-            for item in crawl_res:
+           
+            for item in cast(List[Any], crawl_res):
                 if not isinstance(item, dict):
                     continue
                 f = item.get("forms")
                 if isinstance(f, list):
-                    forms.extend(f)
-                    continue
-                nested = item.get("crawl")
-                if isinstance(nested, dict):
-                    nf = nested.get("forms")
-                    if isinstance(nf, list):
-                        forms.extend(nf)
+                   
+                    forms_raw.extend(f)
+                else:
+                    nested = item.get("crawl")
+                    if isinstance(nested, dict):
+                        nf = nested.get("forms")
+                        if isinstance(nf, list):
+                            forms_raw.extend(nf)
 
-        # ensure we have a list
-        if not isinstance(forms, list):
-            forms = []
+        
+        if not isinstance(forms_raw, list):
+            forms_raw = []
 
-        # optional: deduplicate forms by (url, inputs) to avoid repeats
+        forms = _ensure_forms(forms_raw)
+
+        # dedupe forms (by url + inputs)
         seen = set()
-        deduped = []
+        dedup_forms: List[Any] = []
         for fm in forms:
             try:
-                key = (fm.get("url"), json.dumps(fm.get("inputs", {}), sort_keys=True))
+                if isinstance(fm, dict):
+                    key = (fm.get("url") or fm.get("action"), json.dumps(fm.get("inputs", {}), sort_keys=True))
+                elif isinstance(fm, (list, tuple)) and len(fm) >= 2 and isinstance(fm[1], dict):
+                    key = (str(fm[0]), json.dumps(fm[1].get("inputs", {}), sort_keys=True))
+                else:
+                    key = (str(fm), "")
             except Exception:
-                key = str(fm)
+                key = (str(fm), "")
             if key in seen:
                 continue
             seen.add(key)
-            deduped.append(fm)
-        forms = deduped
-        
-        extra_args = sanitize_sqlmap_args(req.sqlmap_args)
-        
+            dedup_forms.append(fm)
 
-        # run sqlmap with discovered forms (or empty list)
-        sqlmap_res = await tester.run_sqlmap_async(
-            url=target,
-            forms=forms,
-            extra_args=extra_args,
-        )
+        extra_args = sanitize_sqlmap_args(req.sqlmap_args)
+        try:
+            urls.append(target)
+            sqlmap_res = await tester.run_sqlmap_for_urls(urls, forms=dedup_forms, extra_args=extra_args, timeout=600)
+
+            # парсимо в окреме поле
+            sqlmap_parsed = None
+            if isinstance(sqlmap_res, dict) and sqlmap_res.get("ok"):
+                sqlmap_parsed = tester._parse_sqlmap_output(sqlmap_res.get("output", ""))
+
+        except Exception as e:
+            sqlmap_parsed = {"ok": False, "error": str(e)}
 
     await fetcher2.close()
 
-    # --- Combine all results ---
     parts = {
-        'ports': ports,
-        'crawl': crawl_res,
-        'headers': header_res,
-        'xss': xss,
-        'sqli': sqli,
-        'sqlmap': sqlmap_res,
+        "ports": ports,
+        "crawl": crawl_res,
+        "headers": header_res,
+        "xss": xss_results,
+        "sqli": sqli_basic,
+        "sqlmap": sqlmap_parsed,
     }
 
-    # --- Report ---
     report_path = build_report(target, parts)
 
-    # --- Save in DB ---
+    # store summary
     try:
-        summary = {'open_ports': len(parts.get('ports', {}))}
-        query = scans.insert().values(
-            target=target,
-            report_path=report_path,
-            summary=summary,
-            details=parts
-        )
+        summary = {"open_ports": len(parts.get("ports", {}))}
+        query = scans.insert().values(target=target, report_path=report_path, summary=summary, details=parts)
         await database.execute(query)
     except Exception:
         pass
 
-    return {'report': report_path, 'parts': parts}
-
+    return {"report": report_path, "parts": parts}
