@@ -1,0 +1,137 @@
+{
+  "target": "https://theprotocol.it/",
+  "generated": "20251112T125459Z",
+  "results": {
+    "ports": {
+      "tcp": {
+        "80": true,
+        "443": true,
+        "21": false,
+        "22": false,
+        "25": false,
+        "53": false,
+        "110": false,
+        "143": false,
+        "3306": false,
+        "5432": false,
+        "8000": false,
+        "8080": true,
+        "8443": true
+      }
+    },
+    "crawl": {
+      "urls": [
+        "https://theprotocol.it/filtry/coda;t",
+        "https://theprotocol.it/filtry/jenkins;t",
+        "https://theprotocol.it/filtry/kotlin;t",
+        "https://theprotocol.it/filtry/umowa-na-zastepstwo;c",
+        "https://theprotocol.it/filtry/overflow.io;t",
+        "https://theprotocol.it/filtry/gdynia;wp",
+        "https://theprotocol.it/filtry/project-management;sp",
+        "https://theprotocol.it/filtry/f%23;t",
+        "https://theprotocol.it/filtry/ruby;t",
+        "https://theprotocol.it/filtry/apache-airflow;t",
+        "https://theprotocol.it/filtry/scikit-learn;t",
+        "https://theprotocol.it/filtry/xray;t",
+        "https://theprotocol.it/filtry/enterprise-architect;t",
+        "https://theprotocol.it",
+        "https://theprotocol.it/filtry/wordpress;t",
+        "https://theprotocol.it/filtry/sql;t",
+        "https://theprotocol.it/filtry/trainee;p",
+        "https://theprotocol.it/filtry/umowa-o-staz-praktyki;c",
+        "https://theprotocol.it/polityka-prywatnosci",
+        "https://theprotocol.it/filtry/debian;t",
+        "https://theprotocol.it/filtry/hp-uft;t",
+        "https://theprotocol.it/filtry/linux;t",
+        "https://theprotocol.it/filtry/javascript;t",
+        "https://theprotocol.it/filtry/ios;t",
+        "https://theprotocol.it/filtry/ai-ml;sp",
+        "https://theprotocol.it/filtry/kontrakt-b2b;c",
+        "https://theprotocol.it/filtry/react.js;t",
+        "https://theprotocol.it/filtry/oracle;t",
+        "https://theprotocol.it/filtry/android-studio;t",
+        "https://theprotocol.it/filtry/erlang;t",
+        "https://theprotocol.it/filtry/sketch;t",
+        "https://theprotocol.it/filtry/hibernate;t",
+        "https://theprotocol.it/filtry/salesforce;t",
+        "https://theprotocol.it/filtry/bydgoszcz;wp",
+        "https://theprotocol.it/filtry/visual-studio-code;t",
+        "https://theprotocol.it/filtry/javaserver-pages;t",
+        "https://theprotocol.it/filtry/delphi;t",
+        "https://theprotocol.it/filtry/invision;t",
+        "https://theprotocol.it/filtry/postgresql;t",
+        "https://theprotocol.it/filtry/cobol;t",
+        "https://theprotocol.it/filtry/node.js;t",
+        "https://theprotocol.it/filtry/cisco;t",
+        "https://theprotocol.it/filtry/google-cloud-platform;t",
+        "https://theprotocol.it/filtry/emacs;t",
+        "https://theprotocol.it/filtry/grafana;t",
+        "https://theprotocol.it/filtry/pl-sql;t",
+        "https://theprotocol.it/filtry/windows-server;t",
+        "https://theprotocol.it/filtry/bower;t",
+        "https://theprotocol.it/filtry/microsoft-iis;t",
+        "https://theprotocol.it/filtry/protopie;t",
+        "https://theprotocol.it/filtry/openui5;t",
+        "https://theprotocol.it/filtry/webstorm;t",
+        "https://theprotocol.it/filtry/moqups;t",
+        "https://theprotocol.it/praca?kw=business+intelligence"
+      ],
+      "forms": []
+    },
+    "headers": {
+      "present": {
+        "Date": "Wed, 12 Nov 2025 12:50:26 GMT",
+        "Content-Type": "text/html; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "Connection": "keep-alive",
+        "Content-Encoding": "gzip",
+        "CF-Ray": "99d627af4e6cc704-WAW",
+        "CF-Cache-Status": "DYNAMIC",
+        "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "Set-Cookie": "_cfuvid=UFZjYUrS5ZIwtBSpF2kbt2NRohaog.3fVZJWdSYIxds-1762951826396-0.0.1.1-604800000; path=/; domain=.theprotocol.it; HttpOnly; Secure; SameSite=None",
+        "Strict-Transport-Security": "max-age=15552000; includeSubDomains; preload",
+        "Vary": "Accept-Encoding",
+        "content-security-policy": "base-uri 'self'; object-src 'none'; default-src 'self' *.mouseflow.com tahirihhira.gpcdn.pl static.theprotocol.it; img-src data: 'self' alb.reddit.com www.googletagmanager.com googleads.g.doubleclick.net images.typeform.com/images/ www.facebook.com www.google.com www.google.pl www.google-analytics.com region1.google-analytics.com region1.analytics.google.com www.talent.com *.gpcdn.pl *.gstatic.com *.googleapis.com *.linkedin.com *.facebook.net *.talent.com https://www.gstatic.com *.mouseflow.com ad.doubleclick.net bat.bing.com t.co analytics.twitter.com tahirihhira.gpcdn.pl static.theprotocol.it *.ytimg.com https://files.webankieta.pl https://files.startquestion.com ade.googlesyndication.com pagead2.googlesyndication.com www.googleadservices.com google.com; frame-src 'self' widget.eu.criteo.com fledge.eu.criteo.com fledge.criteo.com gum.criteo.com vimeo.com player.vimeo.com www.facebook.com www.youtube.com www.google.com creativecdn.com tpc.googlesyndication.com form.typeform.com vars.hotjar.com www.adzuna.pl *.fls.doubleclick.net td.doubleclick.net *.creativecdn.com *.gemius.pl *.mouseflow.com tahirihhira.gpcdn.pl static.theprotocol.it www.googletagmanager.com; connect-src 'self' *.googlesyndication.com pixel-config.reddit.com in.hotjar.com wss://*.hotjar.com *.hotjar.com *.hotjar.io analytics.tiktok.com sslwidget.criteo.com measurement-api.criteo.com www.facebook.com tracker.pracuj.pl apus-api.theprotocol.it www.google-analytics.com region1.google-analytics.com region1.analytics.google.com www.google.com www.google.pl stats.g.doubleclick.net googleads.g.doubleclick.net *.ingest.sentry.io cdn.linkedin.oribi.io px.ads.linkedin.com *.creativecdn.com *.gemius.pl *.mouseflow.com bat.bing.com www.redditstatic.com conversions-config.reddit.com jooble.org tahirihhira.gpcdn.pl static.theprotocol.it https://app.startquestion.com bat.bing.com bing.com bing.net bat.bing.net ad.doubleclick.net pagead2.googlesyndication.com www.googleadservices.com https://google.com; script-src 'self' maps.gstatic.com gstatic.com/recaptcha/ static.criteo.net sslwidget.criteo.com dynamic.criteo.com connect.facebook.net www.google.com/recaptcha/ www.google.com/maps/ fonts.googleapis.com maps.googleapis.com/maps* khms0.googleapis.com khms1.googleapis.com analytics.tiktok.com embed.typeform.com/next/ snap.licdn.com/li.lms-analytics/ googleads.g.doubleclick.net script.hotjar.com 'unsafe-eval' *.sentry-cdn.com *.gpcdn.pl *.adform.net *.creativecdn.com https://tagmanager.google.com *.gemius.pl 'nonce-N2EzNjM1NzQtMDU1Mi00Yzc5LWE2MjMtNGU3ZThiMzRlNGE0' *.mouseflow.com bat.bing.com tahirihhira.gpcdn.pl static.theprotocol.it https://library.startquestion.com https://app.startquestion.com https://files.startquestion.com www.googleadservices.com www.google.com www.googletagmanager.com pagead2.googlesyndication.com; style-src 'self' 'unsafe-inline' *.googleapis.com www.googletagmanager.com embed.typeform.com/next/ *.theprotocol.it/statics/ https://tagmanager.google.com *.mouseflow.com tahirihhira.gpcdn.pl static.theprotocol.it; font-src 'self' fonts.gstatic.com *.theprotocol.it/statics/ data: *.mouseflow.com tahirihhira.gpcdn.pl static.theprotocol.it; block-all-mixed-content; frame-ancestors 'self'; script-src-attr 'none'; upgrade-insecure-requests;",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "gp-origin": "az-aks",
+        "origin-agent-cluster": "?1",
+        "referrer-policy": "no-referrer-when-downgrade",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": "SAMEORIGIN",
+        "x-permitted-cross-domain-policies": "none",
+        "x-powered-by": "Next.js",
+        "Server": "cloudflare",
+        "alt-svc": "h3=\":443\"; ma=86400"
+      },
+      "missing": [
+        "Content-Security-Policy",
+        "X-Frame-Options",
+        "X-Content-Type-Options",
+        "Referrer-Policy"
+      ]
+    },
+    "xss": [
+      {
+        "url": "https://theprotocol.it/praca?kw=__WS__3ee6ff5e__",
+        "param": "kw",
+        "marker": "__WS__3ee6ff5e__",
+        "reflected": true,
+        "status": 200,
+        "similarity": 0.4612616720669844
+      }
+    ],
+    "sqli": [
+      {
+        "param": "kw",
+        "payload": "'",
+        "url": "https://theprotocol.it/praca?kw=business+intelligence%27",
+        "suspected": true,
+        "status": 200
+      }
+    ],
+    "sqlmap": null
+  }
+}

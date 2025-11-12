@@ -172,7 +172,7 @@ function FindingsList({ items = [], type = "Finding" }) {
 }
 
 function SqlmapView({ sqlmap }) {
-  // підтримує і масив, і об'єкт з output
+
   const results = Array.isArray(sqlmap)
     ? sqlmap
     : Array.isArray(sqlmap?.output)
@@ -181,7 +181,7 @@ function SqlmapView({ sqlmap }) {
         ? [sqlmap]
         : [];
 
-  if (!items || items.length === 0) {
+  if (!results || results.length === 0) {
    return (
       <div
         style={{
