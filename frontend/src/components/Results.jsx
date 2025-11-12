@@ -181,7 +181,23 @@ function SqlmapView({ sqlmap }) {
         ? [sqlmap]
         : [];
 
-  if (!results.length) return <div>No results</div>;
+  if (!items || items.length === 0) {
+   return (
+      <div
+        style={{
+          background: "#0f172a",
+          color: "#22c55e",
+          padding: "20px",
+          borderRadius: 8,
+          textAlign: "center",
+          fontWeight: 600,
+          fontSize: 18,
+        }}
+      >
+        ✅ Secure — No sqlmap vulnerabilities found
+      </div>
+    ); 
+  }
 
   return (
     <div>

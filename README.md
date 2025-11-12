@@ -225,5 +225,5 @@ curl -X POST "http://localhost:8000/api/scan" \
 ![Image alt](./img/Screenshot%202025-11-09%20204530.png)
 ![Image alt](./img/Screenshot%202025-11-09%20204536.png)
 ![Image alt](./img/Screenshot%202025-11-09%20204540.png)
-![Image alt](./img/Screenshot%202025-11-09%20204544.png)
-![Image alt](./img/Screenshot%202025-11-09%20204547.png)
+![Image alt](./img/Screenshot%202025-11-12%20015006.png)
+![Image alt](./img/Screenshot%202025-11-12%20015011.png)

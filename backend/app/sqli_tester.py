@@ -6,6 +6,8 @@ import urllib.parse
 import re
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse, urlunparse
+import itertools
+from concurrent.futures import ThreadPoolExecutor
 
 from .fetcher import Fetcher
 from .config import USE_SQLMAP, SQLMAP_IMAGE, SQLMAP_CONTAINER_NAME
@@ -113,6 +115,27 @@ class SQLiTester:
             raise RuntimeError("docker SDK is not installed in this environment")
         self._docker_client = docker.from_env()
         return self._docker_client
+
+    def _ensure_image_ready(self, image: str) -> Optional[str]:
+        """
+        Ensure image is available locally (pull once). Returns image name or None on error.
+        This is synchronous (Docker SDK).
+        """
+        if docker is None:
+            logger.warning("Docker SDK not available for pre-pull")
+            return None
+        try:
+            client = self._get_docker_client()
+            try:
+                client.images.get(image)
+                logger.info("sqlmap image already present: %s", image)
+            except Exception:
+                logger.info("Pulling sqlmap image (first time): %s", image)
+                client.images.pull(image)
+            return image
+        except Exception as e:
+            logger.exception("Failed to ensure image: %s", e)
+            return None
 
     # -----------------------
     # Run sqlmap in temporary container (async wrapper)
@@ -386,33 +409,70 @@ class SQLiTester:
         urls: List[str],
         extra_args: Optional[List[str]] = None,
         forms: Optional[List[Dict[str, Any]]] = None,
-        timeout: int = 600
+        timeout: int = 600,
+        concurrency: int = 6
     ) -> List[Dict[str, Any]]:
         """
-        Проганяє sqlmap по списку URL'ів, повертає об’єднаний список знайдених уразливостей.
+        Паралельно проганяє sqlmap по списку URL'ів з обмеженням concurrency.
+        Повертає список знайдених уразливостей (як раніше).
+
+        Параметри:
+            - urls: список url для перевірки
+            - extra_args: додаткові аргументи sqlmap (список рядків)
+            - forms: список форм (для POST/JSON)
+            - timeout: таймаут на кожен виклик (секунди)
+            - concurrency: скільки контейнерів запускати одночасно
         """
-        results = []
+        results: List[Dict[str, Any]] = []
         if not urls:
             return results
 
-        for url in urls:
-            try:
-                logger.info(f"Running sqlmap on {url}")
-                result = await self.run_sqlmap_async(url, extra_args=extra_args, forms=forms, timeout=timeout)
-                if not result.get("ok"):
-                    logger.warning(f"sqlmap failed on {url}: {result.get('error')}")
-                    continue
+        # підготувати образ заздалегідь, щоб уникнути pull в кожному виклику
+        raw_image = (SQLMAP_IMAGE or "").strip() or "spsproject-sqlmap:latest"
+        image = raw_image.lstrip("/")
+        # це виконуємо в потоці (synchronous docker ops)
+        loop = asyncio.get_running_loop()
+        try:
+            await loop.run_in_executor(None, self._ensure_image_ready, image)
+        except Exception:
+            # якщо не вдалось підвантажити образ — продовжимо, бо _run_sqlmap_container теж спробує
+            logger.debug("Image pre-pull failed or skipped; continuing and letting runner handle it.")
 
-                output = result.get("output", "")
-                parsed = self._parse_sqlmap_output(output)
-                if parsed:
-                    for f in parsed:
-                        f["url"] = url
-                    results.extend(parsed)
+        sem = asyncio.Semaphore(concurrency)
 
-            except Exception as e:
-                logger.exception(f"Failed to scan {url}: {e}")
+        async def _worker(url: str):
+            async with sem:
+                try:
+                    logger.info("Running sqlmap on %s", url)
+                    # Передати extra_args але додати --crawl=0 за замовчуванням, якщо користувач не задав
+                    local_extra = list(extra_args) if extra_args else []
+                    if not any(a.startswith("--crawl") for a in local_extra):
+                        local_extra.append("--crawl=0")
+                    # Якщо користувач не задав threads — запропонуємо більше (але не обов'язково)
+                    if not any(a.startswith("--threads") for a in local_extra):
+                        local_extra.append("--threads=10")
 
+                    res = await self.run_sqlmap_async(url, extra_args=local_extra, forms=forms, timeout=timeout)
+                    if not res.get("ok"):
+                        logger.warning("sqlmap failed on %s: %s", url, res.get("error"))
+                        return []
+                    output = res.get("output", "")
+                    parsed = self._parse_sqlmap_output(output)
+                    if parsed:
+                        for f in parsed:
+                            f["url"] = url
+                    return parsed
+                except Exception as e:
+                    logger.exception("Failed to scan %s: %s", url, e)
+                    return []
+
+        # Запускаємо worker'и (контролюємо concurrency через семафор)
+        tasks = [asyncio.create_task(_worker(u)) for u in urls]
+        all_found = await asyncio.gather(*tasks, return_exceptions=False)
+
+        for sub in all_found:
+            if isinstance(sub, list):
+                results.extend(sub)
         return results
 
 

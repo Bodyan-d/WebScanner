@@ -1,6 +1,6 @@
 {
-  "target": "https://www.upsl.edu.pl//",
-  "generated": "20251102T173426Z",
+  "target": "https://www.upsl.edu.pl/",
+  "generated": "20251112T005242Z",
   "results": {
     "ports": {
       "tcp": {
@@ -21,59 +21,68 @@
     },
     "crawl": {
       "urls": [
-        "https://www.upsl.edu.pl/struktura/instytuty-katedry",
-        "https://www.upsl.edu.pl/projekty/zrealizowane-projekty",
-        "https://www.upsl.edu.pl/aktualnosci-serwisu",
-        "https://www.upsl.edu.pl/Polityka-plikow-Cookie",
-        "https://www.upsl.edu.pl/oferta/biuro-karier/kontakt",
-        "https://www.upsl.edu.pl/ksztalcenie/akty-prawne-dot.-jakosci-ksztalcenia",
-        "https://www.upsl.edu.pl/studenci/pomoc-socjalna/stypendium-socjalne",
-        "https://www.upsl.edu.pl/nauka/komercjalizacja/sciezka-dzialania",
-        "https://www.upsl.edu.pl/struktura/rada-uczelni",
-        "https://www.upsl.edu.pl/studenci/zakwaterowanie-w-domach-studenta",
-        "https://www.upsl.edu.pl/nauka/dzien-nauki-i-sportu2/media",
-        "https://www.upsl.edu.pl/kalendarz-wydarzen/studencki-klub-ksiazki-zaprasza-wszystkich-milosnikow-romantic-fantasy-na-kolejne-spotkanie-do-czytelni-biblioteki-uniwersytetu",
-        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/projekt-herbarium",
-        "https://www.upsl.edu.pl/oferta/biuro-karier/badanie-losow-absolwentow",
-        "https://www.upsl.edu.pl/kalendarz-wydarzen/iii-mistrzostwa-uniwersytetu-pomorskiego-w-slupsku-w-strzelectwie-sportowym-bron-pneumatyczna",
-        "https://www.upsl.edu.pl/struktura/archiwum-uczelniane",
-        "https://www.upsl.edu.pl/biblioteka-uniwersytetu-pomorskiego-w-slupsku/aktualnosci",
+        "https://www.upsl.edu.pl/studenci/biuro-ds.-studentow",
         "https://www.upsl.edu.pl/nauka/dzien-nauki-i-sportu2/galeria",
-        "https://www.upsl.edu.pl/nauka/interdyscyplinarny-inkubator-innowacyjnosci-4.0/ogloszenia-o-konkursie",
-        "https://www.upsl.edu.pl/zintegrowany-program-uczelni",
-        "https://www.upsl.edu.pl/nauka/interdyscyplinarny-inkubator-innowacyjnosci-4.0/aktualnosci",
-        "https://www.upsl.edu.pl/aktualnosci-serwisu/iii-mistrzostwa-uniwersytetu-pomorskiego-w-slupsku-w-badmintona-w-grach-pojedynczych-mezczyzn-oraz-deblach-kobiet",
-        "https://www.upsl.edu.pl/struktura/biuro-ds.-rozwoju-i-wspolpracy",
-        "https://www.upsl.edu.pl/stowarzyszenie-absolwentow-i-pracownikow/ogloszenia",
-        "https://www.upsl.edu.pl/ksztalcenie/procedury/wykazy-procedur-i-regulaminow",
-        "https://www.upsl.edu.pl/ksztalcenie/polityka-jakosci-ksztalcenia/cele-i-zasady-pjk",
-        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/dodatek-motywacyjny-za-publikacje-wysoko-punktowane",
+        "https://www.upsl.edu.pl/ksztalcenie/polityka-jakosci-ksztalcenia/kodeks-dobrych-praktyk",
+        "https://www.upsl.edu.pl/nauka/aktualnosci",
+        "https://www.upsl.edu.pl/kalendarz-wydarzen/instytut-historii-zaprasza-do-biblioteki-uniwersytetu-na-spotkanie-z-dr-malgorzata-mastalerz-krystjanczuk-gosciem-specjalnym-kolejnego-slupskiego",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/iii-mistrzostwa-uniwersytetu-pomorskiego-w-slupsku-o-puchar-jm-rektora-dr-hab.-inz.-zbigniewa-osadowskiego-prof.-up-w-strzelaniu-z-broni-dlugiej-pn",
+        "https://www.upsl.edu.pl/nauka/komercjalizacja/o-nas",
+        "https://www.upsl.edu.pl/struktura/instytuty-katedry",
+        "https://www.upsl.edu.pl/oferta/kursy-i-szkolenia/oferta",
+        "https://www.upsl.edu.pl/ksztalcenie/doskonalenie-kompetencji-nauczycieli-akademickich/studia-podyplomowe-z-zakresu-dydaktyki-szkoly-wyzszej",
+        "https://www.upsl.edu.pl/nauka/nostryfikacja-stopni-naukowych",
+        "https://www.upsl.edu.pl/nauka/konferencje/informacje-dla-organizatorow",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/uniwersytet-pomorski-w-slupsku-na-targach-edukacyjnych-study-in-poland-w-rabacie",
         "https://www.upsl.edu.pl/wspolpraca/wspolpraca-miedzynarodowa",
-        "https://www.upsl.edu.pl/nauka/komercjalizacja/oferta",
-        "https://www.upsl.edu.pl/pracownicy/aktualnosci",
-        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/sekcja-ds.-funduszy-zewnetrznych",
-        "https://www.upsl.edu.pl/ksztalcenie/ocena-i-monitorowanie-jakosci-ksztalcenia2/raporty-z-ankietyzacji",
-        "https://www.upsl.edu.pl/struktura/administracja/biuro-rektora",
-        "https://www.upsl.edu.pl",
-        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/aktualnosci",
-        "https://www.upsl.edu.pl/kontakt/kontakt",
-        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/projekty",
         "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/granty-zewnetrzne",
-        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/sekcja-ds.-zamowien-publicznych",
-        "https://www.upsl.edu.pl/wspolpraca/wspolpraca-z-gospodarka/nasi-partnerzy",
-        "https://www.upsl.edu.pl/kalendarz-wydarzen",
-        "https://www.upsl.edu.pl/aktualnosci-serwisu/pismo-okolne-nr-r.022.12.25",
-        "https://www.upsl.edu.pl/nauka/biuro-ds.-nauki",
-        "https://www.upsl.edu.pl/ksztalcenie/procedury/schemat-procedury",
+        "https://www.upsl.edu.pl/ksztalcenie/procedury/wykazy-procedur-i-regulaminow",
+        "https://www.upsl.edu.pl/nauka/komercjalizacja/oferta",
+        "https://www.upsl.edu.pl/oferta/kursy-i-szkolenia/regulacje-prawne",
+        "https://www.upsl.edu.pl/nauka/rada-ekspertow2",
+        "https://www.upsl.edu.pl/struktura/administracja/biuro-rektora",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/projekt-imbio",
+        "https://www.upsl.edu.pl/nauka/dzien-nauki-i-sportu2/dla-organizatorow",
+        "https://www.upsl.edu.pl/studenci/aktualnosci",
+        "https://www.upsl.edu.pl/aktualnosci-serwisu/in-quest-of-poetry-sung-and-unsung2",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/projekty",
+        "https://www.upsl.edu.pl/kontakt/deklaracja-dostepnosci",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/ocena-pracownikow",
+        "https://www.upsl.edu.pl/nauka/przydatne-linki",
+        "https://www.upsl.edu.pl/ksztalcenie/akty-prawne-dot.-jakosci-ksztalcenia",
+        "https://www.upsl.edu.pl/studenci/aktualnosci/karta-rabatowa-znizak",
         "https://www.upsl.edu.pl/nauka/konferencje/konferencje-w-up",
-        "https://www.upsl.edu.pl/struktura/biuro-ds.-funduszy-zewnetrznych/projekt-5plus",
-        "https://www.upsl.edu.pl/struktura/administracja/inspektor-ochrony-danych",
+        "https://www.upsl.edu.pl/pracownicy/aktualnosci",
+        "https://www.upsl.edu.pl/struktura/rada-uczelni",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/umowy-cywilno-prawne",
         "https://www.upsl.edu.pl/ksztalcenie/ocena-i-monitorowanie-jakosci-ksztalcenia2/akredytacje",
-        "https://www.upsl.edu.pl/o-uczelni/galerie/galeria",
-        "https://www.upsl.edu.pl/aktualnosci-serwisu/in-quest-of-poetry-sung-and-unsung",
-        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/umowy-cywilno-prawne"
+        "https://www.upsl.edu.pl/nauka/komercjalizacja/kontakt",
+        "https://www.upsl.edu.pl/nauka/uczelniana-komisja-ds.-etyki-badan-naukowych",
+        "https://www.upsl.edu.pl",
+        "https://www.upsl.edu.pl/kontakt/praca",
+        "https://www.upsl.edu.pl/studium-wychowania-fizycznego-i-sportu/aktualnosci-swfis",
+        "https://www.upsl.edu.pl/biblioteka-uniwersytetu-pomorskiego-w-slupsku/aktualnosci/programy-publikowania-otwartego-wbn",
+        "https://www.upsl.edu.pl/struktura/biuro-ds.-ksztalcenia/biuro-ds.-ksztalcenia",
+        "https://www.upsl.edu.pl/nauka/interdyscyplinarny-inkubator-innowacyjnosci-4.0/rada-inwestycyjna",
+        "https://www.upsl.edu.pl/oferta/biuro-karier/badanie-losow-absolwentow",
+        "https://www.upsl.edu.pl/oferta/sale-do-wynajecia",
+        "https://www.upsl.edu.pl/kalendarz-wydarzen/spotkanie-z-wojciechem-chamier-gliszczynskim",
+        "https://www.upsl.edu.pl/studenci/zakwaterowanie-w-domach-studenta",
+        "https://www.upsl.edu.pl/oferta/biuro-karier/kontakt",
+        "https://www.upsl.edu.pl/ksztalcenie/ocena-i-monitorowanie-jakosci-ksztalcenia2/raporty-z-ankietyzacji",
+        "https://www.upsl.edu.pl/projekty/zrealizowane-projekty",
+        "https://www.upsl.edu.pl/nauka/badania-i-rozwoj/subwencja-badawcza"
       ],
       "forms": [
+        [
+          "https://www.upsl.edu.pl/search",
+          {
+            "method": "get",
+            "inputs": {
+              "query": ""
+            }
+          }
+        ],
         [
           "https://www.upsl.edu.pl/search",
           {
@@ -537,7 +546,7 @@
     },
     "headers": {
       "present": {
-        "Date": "Sun, 02 Nov 2025 17:34:32 GMT",
+        "Date": "Wed, 12 Nov 2025 00:42:17 GMT",
         "Content-Type": "text/html; charset=utf-8",
         "Transfer-Encoding": "chunked",
         "Connection": "keep-alive",
@@ -559,9 +568,6 @@
     },
     "xss": [],
     "sqli": [],
-    "sqlmap": {
-      "ok": false,
-      "error": "docker api error: 409 Client Error for http+docker://localhost/v1.51/containers/de0181d3e96605144987b78780c8ef8a3fc2997a445a3fd26a0e19959e2d3761/logs?stderr=1&stdout=1&timestamps=0&follow=0&tail=all: Conflict (\"can not get logs from container which is dead or marked for removal\")"
-    }
+    "sqlmap": null
   }
 }
