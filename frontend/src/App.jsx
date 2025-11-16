@@ -4,7 +4,7 @@ import Results from "./components/Results";
 
 export default function App() {
   const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({ base: false, sqlmap: false });
   const [error, setError] = useState(null);
 
   return (
@@ -19,24 +19,35 @@ export default function App() {
           onStart={() => {
             setReport(null);
             setError(null);
-            setLoading(true);
+            setLoading({ base: true, sqlmap: false });
           }}
-          onDone={(res) => {
-            setReport(res);
-            setLoading(false);
+          onDone={(res, sqlmapDone = false) => {
+            if (sqlmapDone) {
+              setReport(prev => ({
+                ...prev,
+                parts: { ...prev?.parts, sqlmap: res.parts?.sqlmap },
+                report: res.report || prev?.report
+              }));
+              setLoading(prev => ({ ...prev, sqlmap: false }));
+            } else {
+              setReport(res);
+              setLoading(prev => ({ ...prev, base: false }));
+            }
           }}
           onError={(err) => {
             setError(err);
-            setLoading(false);
+            setLoading({ base: false, sqlmap: false });
           }}
         />
 
-        {loading && <div className="notify">Scan running — this may take some time...</div>}
+        {loading.base && (
+          <div className="notify">Scan running — this may take some time...</div>
+        )}
         {error && <div className="error">Error: {String(error)}</div>}
 
         {report && (
           <section style={{ marginTop: 20 }}>
-            <Results parts={report.parts} report={report.report} />
+            <Results parts={report.parts} report={report.report} loading={loading} />
           </section>
         )}
       </main>

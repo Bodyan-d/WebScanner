@@ -1,10 +1,9 @@
 import React from "react";
 
-
 export default function Tabs({ tabs, defaultTab }) {
   const [active, setActive] = React.useState(defaultTab || (tabs[0] && tabs[0].id));
 
-  React.useEffect(()=> {
+  React.useEffect(() => {
     if (!active && tabs[0]) setActive(tabs[0].id);
   }, [tabs]);
 
@@ -12,18 +11,18 @@ export default function Tabs({ tabs, defaultTab }) {
 
   return (
     <div>
-      <div className="tabs">
+      <div className="tabs-row">
         {tabs.map(t => (
           <button
             key={t.id}
-            className={`tab-btn ${t.id===active ? "active" : ""}`}
+            className={`tab-btn ${t.id === active ? "active" : ""}`}
             onClick={() => setActive(t.id)}
           >
             {t.title}
           </button>
         ))}
       </div>
-      <div className="tab-content">
+      <div style={{marginTop:16}}>
         {activeTab ? activeTab.content : null}
       </div>
     </div>
