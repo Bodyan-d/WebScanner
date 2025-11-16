@@ -337,4 +337,10 @@ code {
   font-family: monospace;
 }
 
+.url-wrap {
+  word-break: break-word;        
+  white-space: normal;           
+  overflow-wrap: anywhere;       
+  max-width: 100%;               
 
+}

@@ -7,7 +7,6 @@ export default function ScanForm({ onStart, onDone, onError }) {
   const [maxPages, setMaxPages] = useState(50);
   const [concurrency, setConcurrency] = useState(5);
   const [runSqlmap, setRunSqlmap] = useState(false);
-  // sqlmap args
   const [level, setLevel] = useState(3);
   const [risk, setRisk] = useState(2);
   const [threads, setThreads] = useState(5);
@@ -26,27 +25,72 @@ export default function ScanForm({ onStart, onDone, onError }) {
     ];
     if (tamper) sqlmap_args.push(`--tamper=${tamper}`);
 
-    const payload = {
+    const basePayload = {
       url,
       max_pages: Number(maxPages),
       concurrency: Number(concurrency),
-      run_sqlmap: !!runSqlmap,
-      sqlmap_args: runSqlmap ? sqlmap_args : undefined
+      run_sqlmap: false,
+      sqlmap_args: undefined
     };
 
     try {
       onStart && onStart();
-      const res = await fetch(`${API_BASE}/api/scan`, {
+
+      // 1️⃣ Базове сканування
+      const resBase = await fetch(`${API_BASE}/api/scan_no_sqlmap`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(basePayload)
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Server ${res.status}: ${txt}`);
+
+      if (!resBase.ok) {
+        const txt = await resBase.text();
+        throw new Error(`Server ${resBase.status}: ${txt}`);
       }
-      const json = await res.json();
-      onDone && onDone(json);
+
+      const jsonBase = await resBase.json();
+
+      onDone && onDone(jsonBase);
+
+      if (!runSqlmap) return;
+
+      // 2️⃣ Sqlmap сканування
+      const scanId = jsonBase.scan_id;
+      if (!scanId) {
+        const err = new Error("scan_id not returned by server — cannot run sqlmap.");
+        onError && onError(err);
+        return;
+      }
+
+      const sqlmapPayload = {
+        url,
+        scan_id: scanId,
+        run_sqlmap: true,
+        sqlmap_args: sqlmap_args
+      };
+
+      const resSqlmap = await fetch(`${API_BASE}/api/scan_sqlmap`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sqlmapPayload)
+      });
+
+      if (!resSqlmap.ok) {
+        const txt = await resSqlmap.text();
+        throw new Error(`SQLMap run failed ${resSqlmap.status}: ${txt}`);
+      }
+
+      const jsonSqlmap = await resSqlmap.json();
+
+
+      onDone && onDone(prev => ({
+        ...prev,
+        parts: {
+          ...prev.parts,
+          sqlmap: jsonSqlmap.parts?.sqlmap || jsonSqlmap
+        }
+      }));
+
     } catch (err) {
       onError && onError(err);
     }

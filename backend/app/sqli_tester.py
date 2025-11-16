@@ -63,9 +63,7 @@ class SQLiTester:
         self.fetcher = fetcher
         self._docker_client = None
 
-    # -----------------------
-    # Basic differential tester (async)
-    # -----------------------
+
     async def basic_diff(self, url: str) -> List[Dict[str, Any]]:
         if self.fetcher is None:
             raise RuntimeError("basic_diff requires a Fetcher instance")
@@ -105,9 +103,7 @@ class SQLiTester:
                     logger.debug("basic_diff: request failed %s -> %s", target, e)
         return results
 
-    # -----------------------
-    # Docker helper
-    # -----------------------
+
     def _get_docker_client(self):
         if self._docker_client is not None:
             return self._docker_client
@@ -137,9 +133,7 @@ class SQLiTester:
             logger.exception("Failed to ensure image: %s", e)
             return None
 
-    # -----------------------
-    # Run sqlmap in temporary container (async wrapper)
-    # -----------------------
+
     async def run_sqlmap_async(
         self,
         url: str,
@@ -170,18 +164,18 @@ class SQLiTester:
             "--threads=5",
         ]
 
-        # Use extra_args if given, otherwise defaults
+        
         args: List[str] = list(extra_args) if extra_args else list(defaults)
         logger.info("sqli_tester: ARGS: %r", args)
 
-        # --- Helper: normalize a single raw form element into a dict ---
+        
         def _normalize_one(raw: Any) -> Optional[Dict[str, Any]]:
             try:
                 if isinstance(raw, dict):
                     return cast(Dict[str, Any], raw)
 
                 if isinstance(raw, (tuple, list)):
-                    # case: (url, dict)
+                    
                     if len(raw) == 2 and isinstance(raw[1], dict):
                         url_part = raw[0]
                         if not isinstance(url_part, str):
@@ -190,7 +184,7 @@ class SQLiTester:
                         nf.update(raw[1])
                         return nf
 
-                    # case: (url, method_or_dict, ...)
+                    
                     if len(raw) >= 2 and isinstance(raw[0], str):
                         second = raw[1]
                         if isinstance(second, dict):
@@ -198,14 +192,14 @@ class SQLiTester:
                             nf.update(second)
                             return nf
 
-                # unknown shape
+                
                 logger.debug("sqli_tester: skipping unknown form shape: %r", raw)
                 return None
             except Exception:
                 logger.exception("sqli_tester: failed to normalize form: %r", raw)
                 return None
 
-        # --- Helper: prepare args for a POST form dict (first suitable) ---
+        
         def _prepare_post_args_from_form(form: Dict[str, Any]) -> List[str]:
             added: List[str] = []
             try:
@@ -228,7 +222,7 @@ class SQLiTester:
                         added += ["--data", json.dumps(data_obj)]
                         added += ["--headers", "Content-Type: application/json"]
                     except Exception:
-                        # fallback to urlencoded
+                        
                         data = "&".join(f"{k}={urllib.parse.quote_plus('test')}" for k in inputs.keys())
                         added += ["--data", data]
                 else:
@@ -240,7 +234,7 @@ class SQLiTester:
                 logger.exception("sqli_tester: failed to prepare data for form %r", form)
                 return []
 
-        # If forms provided, normalize and try to attach the first suitable POST
+        
         if forms:
             normalized: List[Dict[str, Any]] = []
             for raw in forms:
@@ -252,13 +246,13 @@ class SQLiTester:
                 post_args = _prepare_post_args_from_form(form)
                 if post_args:
                     args += post_args
-                    break  # attach only the first suitable POST form
+                    break  
 
-        # Ensure '-u' is at the start (sqlmap image ENTRYPOINT expects args only)
+        
         final_args = ["-u", safe_url] + args
         logger.info("sqli_tester: FINAL sqlmap args: %r", final_args)
 
-        # run blocking in thread
+        
         return await asyncio.to_thread(self._run_sqlmap_container, final_args, timeout)
 
 
@@ -276,19 +270,19 @@ class SQLiTester:
             logger.exception("Docker SDK not available")
             return {"ok": False, "error": str(e)}
 
-        # image: prefer configured image then fallback to spsproject-sqlmap:latest
+       
         raw_image = (SQLMAP_IMAGE or "").strip() or "spsproject-sqlmap:latest"
         image = raw_image.lstrip("/")
 
         try:
-            # ensure image present (pull if name is remote)
+            
             try:
                 client.images.get(image)
             except Exception:
                 logger.info("Pulling sqlmap image: %s", image)
                 client.images.pull(image)
 
-            # Use containers.run with detach=False -> returns logs (blocking)
+            
             try:
                 output_bytes = client.containers.run(
                     image=image,
@@ -319,55 +313,49 @@ class SQLiTester:
             return {"ok": False, "error": str(exc)}
         
     def _parse_sqlmap_output(self, raw: str) -> List[Dict[str, Any]]:
-        """
-        Парсить stdout sqlmap і повертає лише реальні знахідки про вразливості.
-        Фільтрує службові INFO/WARNING повідомлення.
-        """
         if not raw:
             return []
 
         findings: List[Dict[str, Any]] = []
         seen = set()
 
-        # ключові фрази, які в sqlmap зазвичай означають *справжню уразливість*
-        confirmed_keywords = (
-            "is vulnerable",
-            "is injectable",
-            "sql injection vulnerability",
-            "identified the following injection point",
-            "back-end dbms",
-            "parameter",
-            "payload:",
-            "type: boolean-based blind",
-            "type: error-based",
-            "type: time-based",
-            "the back-end dbms",
-        )
+        confirmed_patterns = [
+            r'is vulnerable',
+            r'is injectable',
+            r'sql injection vulnerability',
+            r'identified the following injection point',
+            r'back-end dbms',
+            r'parameter',
+            r'payload:',
+            r'type: boolean-based blind',
+            r'type: error-based',
+            r'type: time-based',
+            r'possible',
+        ]
 
-        # фрази, які хочемо проігнорувати (тести, мережеві попередження і т.п.)
-        ignore_keywords = (
-            "testing",
-            "trying",
-            "could not",
-            "connection",
-            "resuming",
-            "parameter(s) not found",
-            "all tested parameters",
-            "fetched data logged",
-            "starting",
-            "ending",
-            "check",
-            "info",
-            "enumerating",
-            "payload value used",
-            "http error",
-            "unknown",
-            "possible",
-        )
+        ignore_patterns = [
+            r'testing',
+            r'trying',
+            r'could not',
+            r'connection',
+            r'resuming',
+            r'parameter\(s\) not found',
+            r'all tested parameters',
+            r'fetched data logged',
+            r'starting',
+            r'ending',
+            r'check',
+            r'info',
+            r'enumerating',
+            r'payload value used',
+            r'http error',
+            r'unknown',
 
-        line_re = re.compile(
-            r'^(?:\[\d{2}:\d{2}:\d{2}\]\s*)?\[(?P<level>[A-Z]+)\]\s*(?P<msg>.*)$'
-        )
+        ]
+
+        line_re = re.compile(r'^(?:\[\d{2}:\d{2}:\d{2}\]\s*)?\[(?P<level>[A-Z]+)\]\s*(?P<msg>.*)$')
+
+        current_block = {"level": "OTHER", "lines": []}
 
         for raw_line in raw.splitlines():
             line = raw_line.strip()
@@ -376,31 +364,43 @@ class SQLiTester:
 
             m = line_re.match(line)
             if m:
-                lvl = m.group("level")
-                msg = m.group("msg").strip()
+                # Обробляємо попередній блок
+                if current_block["lines"]:
+                    full_msg = "\n".join(current_block["lines"]).strip()
+                    low_msg = full_msg.lower()
+                    if not any(re.search(pat, low_msg) for pat in ignore_patterns):
+                        if any(re.search(pat, low_msg) for pat in confirmed_patterns) or current_block["level"] in ("CRITICAL", "ERROR"):
+                            key = (current_block["level"], full_msg)
+                            if key not in seen:
+                                seen.add(key)
+                                short_msg = full_msg.split(".", 1)[0][:100].strip()
+                                findings.append({
+                                    "level": current_block["level"],
+                                    "message": short_msg,
+                                    "detail": full_msg,
+                                    "lines": current_block["lines"]
+                                })
+                current_block = {"level": m.group("level"), "lines": [m.group("msg").strip()]}
             else:
-                lvl = "OTHER"
-                msg = line
+                # Продовжуємо multi-line блок
+                current_block["lines"].append(line)
 
-            low = msg.lower()
-
-            # ігноруємо службові або нецікаві повідомлення
-            if any(k in low for k in ignore_keywords):
-                continue
-
-            # беремо лише ті, де є ознаки справжніх вразливостей
-            if any(k in low for k in confirmed_keywords) or lvl in ("CRITICAL", "ERROR"):
-                key = (lvl, msg)
-                if key in seen:
-                    continue
-                seen.add(key)
-                short = msg.split(".", 1)[0].strip()
-                findings.append({
-                    "level": lvl,
-                    "message": short,
-                    "detail": msg,
-                    "line": line
-                })
+        # Останній блок
+        if current_block["lines"]:
+            full_msg = "\n".join(current_block["lines"]).strip()
+            low_msg = full_msg.lower()
+            if not any(re.search(pat, low_msg) for pat in ignore_patterns):
+                if any(re.search(pat, low_msg) for pat in confirmed_patterns) or current_block["level"] in ("CRITICAL", "ERROR"):
+                    key = (current_block["level"], full_msg)
+                    if key not in seen:
+                        seen.add(key)
+                        short_msg = full_msg.split(".", 1)[0][:100].strip()
+                        findings.append({
+                            "level": current_block["level"],
+                            "message": short_msg,
+                            "detail": full_msg,
+                            "lines": current_block["lines"]
+                        })
 
         return findings
     
@@ -427,15 +427,15 @@ class SQLiTester:
         if not urls:
             return results
 
-        # підготувати образ заздалегідь, щоб уникнути pull в кожному виклику
+        
         raw_image = (SQLMAP_IMAGE or "").strip() or "spsproject-sqlmap:latest"
         image = raw_image.lstrip("/")
-        # це виконуємо в потоці (synchronous docker ops)
+        
         loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, self._ensure_image_ready, image)
         except Exception:
-            # якщо не вдалось підвантажити образ — продовжимо, бо _run_sqlmap_container теж спробує
+            
             logger.debug("Image pre-pull failed or skipped; continuing and letting runner handle it.")
 
         sem = asyncio.Semaphore(concurrency)
@@ -444,11 +444,11 @@ class SQLiTester:
             async with sem:
                 try:
                     logger.info("Running sqlmap on %s", url)
-                    # Передати extra_args але додати --crawl=0 за замовчуванням, якщо користувач не задав
+                    
                     local_extra = list(extra_args) if extra_args else []
                     if not any(a.startswith("--crawl") for a in local_extra):
                         local_extra.append("--crawl=0")
-                    # Якщо користувач не задав threads — запропонуємо більше (але не обов'язково)
+                    
                     if not any(a.startswith("--threads") for a in local_extra):
                         local_extra.append("--threads=10")
 
@@ -466,7 +466,7 @@ class SQLiTester:
                     logger.exception("Failed to scan %s: %s", url, e)
                     return []
 
-        # Запускаємо worker'и (контролюємо concurrency через семафор)
+       
         tasks = [asyncio.create_task(_worker(u)) for u in urls]
         all_found = await asyncio.gather(*tasks, return_exceptions=False)
 
@@ -488,7 +488,7 @@ def run_sqlmap_sync_direct(url: str, extra_args: Optional[List[str]] = None, for
 
     try:
         tester = SQLiTester(fetcher=None)
-        # adapt same logic as run_sqlmap_async (rewrite localhost, prepare args)
+        
         safe_url = _rewrite_localhost_for_container(url)
         defaults = [
             "--batch",
@@ -499,7 +499,7 @@ def run_sqlmap_sync_direct(url: str, extra_args: Optional[List[str]] = None, for
         ]
         args = list(extra_args) if extra_args else defaults
 
-        # attach form data if provided
+        
         if forms:
             for form in forms:
                 method = form.get("method", "get").lower()

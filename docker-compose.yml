@@ -1,4 +1,3 @@
-# docker-compose.yml
 services:
   backend:
     build: ./backend
@@ -9,10 +8,12 @@ services:
       - ./backend/app:/app/app
       - ./backend/data:/app/data
       - ./scan_results:/tmp/scan_reports
+      - ./backend/.cache/ms-playwright:/root/.cache/ms-playwright  # зберігає браузери між збірками
     environment:
       - USE_SQLMAP=true
       - SQLMAP_CONTAINER_NAME=sqlmap
       - SQLMAP_IMAGE=spsproject-sqlmap:latest   
+      - PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
     depends_on:
       - sqlmap
 
