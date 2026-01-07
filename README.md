@@ -221,10 +221,12 @@ curl -X POST "http://localhost:8000/api/scan" \
 
 
 
-![Image alt](./img/Screenshot%202025-11-09%20203845.png)
-![Image alt](./img/Screenshot%202025-11-09%20204530.png)
-![Image alt](./img/Screenshot%202025-11-09%20204536.png)
-![Image alt](./img/Screenshot%202025-11-09%20204540.png)
-![Image alt](./img/Screenshot%202025-11-12%20142937.png)
-![Image alt](./img/Screenshot%202025-11-12%20143002.png)
-![Image alt](./img/Screenshot%202025-11-12%20134500.png)
+![Image alt](./img/Screenshot%202026-01-07%20154022.png)
+![Image alt](./img/Screenshot%202026-01-07%20154739.png)
+![Image alt](./img/Screenshot%202026-01-07%20154746.png)
+![Image alt](./img/Screenshot%202026-01-07%20154751.png)
+![Image alt](./img/Screenshot%202026-01-07%20154800.png)
+![Image alt](./img/Screenshot%202026-01-07%20154805.png)
+![Image alt](./img/Screenshot%202026-01-07%20160118.png)
+![Image alt](./img/Screenshot%202026-01-07%20154814.png)
+![Image alt](./img/Screenshot%202026-01-07%20155342.png)
