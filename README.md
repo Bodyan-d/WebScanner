@@ -26,7 +26,7 @@
 **WebScanner** to asynchroniczna aplikacja (backend + frontend), która wykonuje audyt wybranej witryny [WWW](http://WWW). Główne zadania:
 
 * crawluje witrynę (zbiera linki i formularze),
-* skanuje porty (nmap lub proste skany TCP),
+* skanuje porty (nmap i proste skany TCP),
 * sprawdza nagłówki bezpieczeństwa (CSP, HSTS, Referrer-Policy itp.),
 * testuje podatności XSS (reflected) i wykonuje podstawowe testy SQLi,
 * opcjonalnie uruchamia `sqlmap` w kontenerze Docker dla głębszej analizy,
