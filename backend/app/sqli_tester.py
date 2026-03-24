@@ -1,68 +1,64 @@
-import logging
 import asyncio
 import json
-import sys
-import urllib.parse
+import logging
 import re
+import sys
+import time
+import urllib.parse
+import uuid
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse, urlunparse
-import itertools
-from concurrent.futures import ThreadPoolExecutor
 
+from .config import SQLMAP_CONTAINER_NAME, SQLMAP_IMAGE, USE_SQLMAP
 from .fetcher import Fetcher
-from .config import USE_SQLMAP, SQLMAP_IMAGE, SQLMAP_CONTAINER_NAME
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
-
-BASIC_PAYLOADS = ["'", "\"", " OR 1=1 -- "]
-
+BASIC_PAYLOADS = ["'", '"', " OR 1=1 -- "]
+OVERRIDABLE_SQLMAP_PREFIXES = ("--level=", "--risk=", "--threads=", "--crawl=", "--tamper=")
 
 try:
     import docker
-    from docker.errors import ContainerError, ImageNotFound, APIError
+    from docker.errors import APIError, ImageNotFound
 except Exception:
     docker = None  # type: ignore
-    ContainerError = Exception  # type: ignore
-    ImageNotFound = Exception  # type: ignore
     APIError = Exception  # type: ignore
+    ImageNotFound = Exception  # type: ignore
 
 
 def _rewrite_localhost_for_container(url: str) -> str:
-    """
-    If url points to localhost/127.0.0.1, rewrite host to host.docker.internal
-    (works for Docker Desktop on Windows/Mac). Keep port if present.
-    Returns original url if no rewrite needed.
-    """
     try:
         parsed = urlparse(url)
         hostname = parsed.hostname
         if hostname in ("localhost", "127.0.0.1"):
             new_host = "host.docker.internal"
-            if parsed.port:
-                new_netloc = f"{new_host}:{parsed.port}"
-            else:
-                new_netloc = new_host
+            new_netloc = f"{new_host}:{parsed.port}" if parsed.port else new_host
             return urlunparse((parsed.scheme, new_netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
     except Exception:
         logger.exception("rewrite_localhost failed for url %s", url)
     return url
 
 
+def _merge_sqlmap_args(defaults: List[str], extra_args: Optional[List[str]]) -> List[str]:
+    merged = list(defaults)
+    for extra in extra_args or []:
+        prefix = next((item for item in OVERRIDABLE_SQLMAP_PREFIXES if extra.startswith(item)), None)
+        if prefix:
+            merged = [arg for arg in merged if not arg.startswith(prefix)]
+        if extra not in merged:
+            merged.append(extra)
+    return merged
+
+
 class SQLiTester:
     def __init__(self, fetcher: Optional[Fetcher] = None):
-        """
-        fetcher can be None if only running sqlmap container commands.
-        For basic_diff you should pass a valid Fetcher instance.
-        """
         self.fetcher = fetcher
         self._docker_client = None
-
 
     async def basic_diff(self, url: str) -> List[Dict[str, Any]]:
         if self.fetcher is None:
@@ -77,9 +73,11 @@ class SQLiTester:
         try:
             base_resp = await self.fetcher.get(url)
             base_text = await base_resp.text(errors="ignore")
+            base_status = base_resp.status
         except Exception as e:
             logger.debug("basic_diff: failed to fetch base url %s: %s", url, e)
             base_text = ""
+            base_status = None
 
         for p in qs.keys():
             for payload in BASIC_PAYLOADS:
@@ -90,19 +88,31 @@ class SQLiTester:
                 try:
                     resp = await self.fetcher.get(target)
                     text = await resp.text(errors="ignore")
-                    if resp.status >= 500 or len(text) != len(base_text):
-                        results.append({
-                            "param": p,
-                            "payload": payload,
-                            "url": target,
-                            "suspected": True,
-                            "status": resp.status
-                        })
+                    status_changed = base_status is not None and resp.status != base_status
+                    significant_length_delta = abs(len(text) - len(base_text)) > max(40, int(len(base_text) * 0.3))
+                    if resp.status >= 500 or (status_changed and resp.status >= 400) or significant_length_delta:
+                        results.append(
+                            {
+                                "param": p,
+                                "payload": payload,
+                                "url": target,
+                                "suspected": True,
+                                "status": resp.status,
+                                "evidence": [
+                                    item
+                                    for item, enabled in (
+                                        ("server_error", resp.status >= 500),
+                                        ("status_change", status_changed and resp.status >= 400),
+                                        ("response_length_shift", significant_length_delta),
+                                    )
+                                    if enabled
+                                ],
+                            }
+                        )
                         break
                 except Exception as e:
                     logger.debug("basic_diff: request failed %s -> %s", target, e)
         return results
-
 
     def _get_docker_client(self):
         if self._docker_client is not None:
@@ -113,10 +123,6 @@ class SQLiTester:
         return self._docker_client
 
     def _ensure_image_ready(self, image: str) -> Optional[str]:
-        """
-        Ensure image is available locally (pull once). Returns image name or None on error.
-        This is synchronous (Docker SDK).
-        """
         if docker is None:
             logger.warning("Docker SDK not available for pre-pull")
             return None
@@ -133,27 +139,18 @@ class SQLiTester:
             logger.exception("Failed to ensure image: %s", e)
             return None
 
-
     async def run_sqlmap_async(
         self,
         url: str,
         extra_args: Optional[List[str]] = None,
         forms: Optional[List[Dict[str, Any]]] = None,
-        timeout: int = 600
+        timeout: int = 600,
     ) -> Dict[str, Any]:
-        """
-        Start sqlmap inside a container (Docker SDK). Returns:
-            {'ok': bool, 'output': str, 'error': str|None, ...}
-        - extra_args: list of additional sqlmap args (overrides defaults).
-        - forms: optional list of forms discovered by crawler (to test POST bodies / JSON).
-        """
-
         logger.info("sqli_tester: EXTRA ARGS: %r", extra_args)
         if not USE_SQLMAP:
             return {"ok": False, "error": "sqlmap disabled (USE_SQLMAP=False)"}
 
         safe_url = _rewrite_localhost_for_container(url)
-
         defaults = [
             "--batch",
             "--random-agent",
@@ -163,43 +160,23 @@ class SQLiTester:
             "--risk=2",
             "--threads=5",
         ]
-
-        
-        args: List[str] = list(extra_args) if extra_args else list(defaults)
+        args = _merge_sqlmap_args(defaults, extra_args)
         logger.info("sqli_tester: ARGS: %r", args)
 
-        
         def _normalize_one(raw: Any) -> Optional[Dict[str, Any]]:
             try:
                 if isinstance(raw, dict):
                     return cast(Dict[str, Any], raw)
-
-                if isinstance(raw, (tuple, list)):
-                    
-                    if len(raw) == 2 and isinstance(raw[1], dict):
-                        url_part = raw[0]
-                        if not isinstance(url_part, str):
-                            url_part = str(url_part)
-                        nf: Dict[str, Any] = {"url": url_part}
-                        nf.update(raw[1])
-                        return nf
-
-                    
-                    if len(raw) >= 2 and isinstance(raw[0], str):
-                        second = raw[1]
-                        if isinstance(second, dict):
-                            nf = {"url": raw[0]}
-                            nf.update(second)
-                            return nf
-
-                
+                if isinstance(raw, (tuple, list)) and len(raw) >= 2 and isinstance(raw[1], dict):
+                    normalized: Dict[str, Any] = {"url": str(raw[0])}
+                    normalized.update(raw[1])
+                    return normalized
                 logger.debug("sqli_tester: skipping unknown form shape: %r", raw)
                 return None
             except Exception:
                 logger.exception("sqli_tester: failed to normalize form: %r", raw)
                 return None
 
-        
         def _prepare_post_args_from_form(form: Dict[str, Any]) -> List[str]:
             added: List[str] = []
             try:
@@ -213,54 +190,44 @@ class SQLiTester:
                         inputs = dict(inputs)
                     except Exception:
                         inputs = {}
+                if not inputs:
+                    return []
 
                 enctype = str(form.get("enctype", "application/x-www-form-urlencoded")).lower()
-
                 if "json" in enctype:
                     try:
                         data_obj = {k: "test" for k in inputs.keys()}
                         added += ["--data", json.dumps(data_obj)]
                         added += ["--headers", "Content-Type: application/json"]
                     except Exception:
-                        
                         data = "&".join(f"{k}={urllib.parse.quote_plus('test')}" for k in inputs.keys())
                         added += ["--data", data]
                 else:
                     data = "&".join(f"{k}={urllib.parse.quote_plus('test')}" for k in inputs.keys())
                     added += ["--data", data]
-
                 return added
             except Exception:
                 logger.exception("sqli_tester: failed to prepare data for form %r", form)
                 return []
 
-        
         if forms:
-            normalized: List[Dict[str, Any]] = []
+            normalized_forms: List[Dict[str, Any]] = []
             for raw in forms:
-                nf = _normalize_one(raw)
-                if nf:
-                    normalized.append(nf)
+                normalized = _normalize_one(raw)
+                if normalized:
+                    normalized_forms.append(normalized)
 
-            for form in normalized:
+            for form in normalized_forms:
                 post_args = _prepare_post_args_from_form(form)
                 if post_args:
-                    args += post_args
-                    break  
+                    args.extend(post_args)
+                    break
 
-        
         final_args = ["-u", safe_url] + args
         logger.info("sqli_tester: FINAL sqlmap args: %r", final_args)
-
-        
         return await asyncio.to_thread(self._run_sqlmap_container, final_args, timeout)
 
-
     def _run_sqlmap_container(self, cmd_args: List[str], timeout: int) -> Dict[str, Any]:
-        """
-        Blocking: runs the sqlmap image/container via Docker SDK.
-        Returns dict with ok/output/error.
-        """
         if docker is None:
             return {"ok": False, "error": "docker SDK not available"}
 
@@ -270,39 +237,57 @@ class SQLiTester:
             logger.exception("Docker SDK not available")
             return {"ok": False, "error": str(e)}
 
-       
         raw_image = (SQLMAP_IMAGE or "").strip() or "spsproject-sqlmap:latest"
         image = raw_image.lstrip("/")
+        container = None
 
         try:
-            
             try:
                 client.images.get(image)
             except Exception:
                 logger.info("Pulling sqlmap image: %s", image)
                 client.images.pull(image)
 
-            
+            container_name = f"{SQLMAP_CONTAINER_NAME}-{uuid.uuid4().hex[:8]}" if SQLMAP_CONTAINER_NAME else None
+            container = client.containers.run(
+                image=image,
+                command=cmd_args,
+                detach=True,
+                stdout=True,
+                stderr=True,
+                remove=False,
+                name=container_name,
+                labels={"app": "webscanner", "component": "sqlmap"},
+            )
+
+            deadline = time.monotonic() + max(1, timeout)
+            timed_out = False
+            while time.monotonic() < deadline:
+                container.reload()
+                if container.status in {"exited", "dead"}:
+                    break
+                time.sleep(1.0)
+            else:
+                timed_out = True
+                try:
+                    container.kill()
+                except Exception:
+                    logger.exception("Failed to kill timed out sqlmap container")
+
             try:
-                output_bytes = client.containers.run(
-                    image=image,
-                    command=cmd_args,
-                    detach=False,
-                    stdout=True,
-                    stderr=True,
-                    remove=True
-                )
-                output = output_bytes.decode(errors="replace") if isinstance(output_bytes, (bytes, bytearray)) else str(output_bytes)
+                wait_result = container.wait(timeout=5)
+                exit_status = int(wait_result.get("StatusCode", 1))
+            except Exception:
+                exit_status = 124 if timed_out else 1
+
+            output_bytes = container.logs(stdout=True, stderr=True)
+            output = output_bytes.decode(errors="replace") if isinstance(output_bytes, (bytes, bytearray)) else str(output_bytes)
+
+            if timed_out:
+                return {"ok": False, "error": f"sqlmap timed out after {timeout}s", "output": output}
+            if exit_status == 0:
                 return {"ok": True, "output": output}
-            except ContainerError as e:
-                stdout = getattr(e, "stdout", None)
-                stderr = getattr(e, "stderr", None)
-                return {
-                    "ok": False,
-                    "error": f"container error exit {getattr(e, 'exit_status', 'unknown')}",
-                    "stdout": (stdout.decode(errors="replace") if stdout else ""),
-                    "stderr": (stderr.decode(errors="replace") if stderr else "")
-                }
+            return {"ok": False, "error": f"container error exit {exit_status}", "output": output}
 
         except ImageNotFound as e:
             return {"ok": False, "error": f"image not found: {e}"}
@@ -311,7 +296,13 @@ class SQLiTester:
         except Exception as exc:
             logger.exception("Unexpected error when running sqlmap container")
             return {"ok": False, "error": str(exc)}
-        
+        finally:
+            if container is not None:
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    logger.debug("Could not remove sqlmap container %s", getattr(container, "name", "<unknown>"))
+
     def _parse_sqlmap_output(self, raw: str) -> List[Dict[str, Any]]:
         if not raw:
             return []
@@ -320,41 +311,39 @@ class SQLiTester:
         seen = set()
 
         confirmed_patterns = [
-            r'is vulnerable',
-            r'is injectable',
-            r'sql injection vulnerability',
-            r'identified the following injection point',
-            r'back-end dbms',
-            r'parameter',
-            r'payload:',
-            r'type: boolean-based blind',
-            r'type: error-based',
-            r'type: time-based',
-            r'possible',
+            r"is vulnerable",
+            r"is injectable",
+            r"sql injection vulnerability",
+            r"identified the following injection point",
+            r"back-end dbms",
+            r"parameter",
+            r"payload:",
+            r"type: boolean-based blind",
+            r"type: error-based",
+            r"type: time-based",
+            r"possible",
         ]
 
         ignore_patterns = [
-            r'testing',
-            r'trying',
-            r'could not',
-            r'connection',
-            r'resuming',
-            r'parameter\(s\) not found',
-            r'all tested parameters',
-            r'fetched data logged',
-            r'starting',
-            r'ending',
-            r'check',
-            r'info',
-            r'enumerating',
-            r'payload value used',
-            r'http error',
-            r'unknown',
-
+            r"testing",
+            r"trying",
+            r"could not",
+            r"connection",
+            r"resuming",
+            r"parameter\(s\) not found",
+            r"all tested parameters",
+            r"fetched data logged",
+            r"starting",
+            r"ending",
+            r"check",
+            r"info",
+            r"enumerating",
+            r"payload value used",
+            r"http error",
+            r"unknown",
         ]
 
-        line_re = re.compile(r'^(?:\[\d{2}:\d{2}:\d{2}\]\s*)?\[(?P<level>[A-Z]+)\]\s*(?P<msg>.*)$')
-
+        line_re = re.compile(r"^(?:\[\d{2}:\d{2}:\d{2}\]\s*)?\[(?P<level>[A-Z]+)\]\s*(?P<msg>.*)$")
         current_block = {"level": "OTHER", "lines": []}
 
         for raw_line in raw.splitlines():
@@ -362,9 +351,8 @@ class SQLiTester:
             if not line:
                 continue
 
-            m = line_re.match(line)
-            if m:
-                # Обробляємо попередній блок
+            match = line_re.match(line)
+            if match:
                 if current_block["lines"]:
                     full_msg = "\n".join(current_block["lines"]).strip()
                     low_msg = full_msg.lower()
@@ -374,18 +362,18 @@ class SQLiTester:
                             if key not in seen:
                                 seen.add(key)
                                 short_msg = full_msg.split(".", 1)[0][:100].strip()
-                                findings.append({
-                                    "level": current_block["level"],
-                                    "message": short_msg,
-                                    "detail": full_msg,
-                                    "lines": current_block["lines"]
-                                })
-                current_block = {"level": m.group("level"), "lines": [m.group("msg").strip()]}
+                                findings.append(
+                                    {
+                                        "level": current_block["level"],
+                                        "message": short_msg,
+                                        "detail": full_msg,
+                                        "lines": current_block["lines"],
+                                    }
+                                )
+                current_block = {"level": match.group("level"), "lines": [match.group("msg").strip()]}
             else:
-                # Продовжуємо multi-line блок
                 current_block["lines"].append(line)
 
-        # Останній блок
         if current_block["lines"]:
             full_msg = "\n".join(current_block["lines"]).strip()
             low_msg = full_msg.lower()
@@ -395,60 +383,47 @@ class SQLiTester:
                     if key not in seen:
                         seen.add(key)
                         short_msg = full_msg.split(".", 1)[0][:100].strip()
-                        findings.append({
-                            "level": current_block["level"],
-                            "message": short_msg,
-                            "detail": full_msg,
-                            "lines": current_block["lines"]
-                        })
+                        findings.append(
+                            {
+                                "level": current_block["level"],
+                                "message": short_msg,
+                                "detail": full_msg,
+                                "lines": current_block["lines"],
+                            }
+                        )
 
         return findings
-    
+
     async def run_sqlmap_for_urls(
         self,
         urls: List[str],
         extra_args: Optional[List[str]] = None,
         forms: Optional[List[Dict[str, Any]]] = None,
         timeout: int = 600,
-        concurrency: int = 6
+        concurrency: int = 3,
     ) -> List[Dict[str, Any]]:
-        """
-        Паралельно проганяє sqlmap по списку URL'ів з обмеженням concurrency.
-        Повертає список знайдених уразливостей (як раніше).
-
-        Параметри:
-            - urls: список url для перевірки
-            - extra_args: додаткові аргументи sqlmap (список рядків)
-            - forms: список форм (для POST/JSON)
-            - timeout: таймаут на кожен виклик (секунди)
-            - concurrency: скільки контейнерів запускати одночасно
-        """
         results: List[Dict[str, Any]] = []
         if not urls:
             return results
 
-        
         raw_image = (SQLMAP_IMAGE or "").strip() or "spsproject-sqlmap:latest"
         image = raw_image.lstrip("/")
-        
+
         loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, self._ensure_image_ready, image)
         except Exception:
-            
             logger.debug("Image pre-pull failed or skipped; continuing and letting runner handle it.")
 
-        sem = asyncio.Semaphore(concurrency)
+        sem = asyncio.Semaphore(max(1, concurrency))
 
         async def _worker(url: str):
             async with sem:
                 try:
                     logger.info("Running sqlmap on %s", url)
-                    
                     local_extra = list(extra_args) if extra_args else []
                     if not any(a.startswith("--crawl") for a in local_extra):
                         local_extra.append("--crawl=0")
-                    
                     if not any(a.startswith("--threads") for a in local_extra):
                         local_extra.append("--threads=10")
 
@@ -458,37 +433,32 @@ class SQLiTester:
                         return []
                     output = res.get("output", "")
                     parsed = self._parse_sqlmap_output(output)
-                    if parsed:
-                        for f in parsed:
-                            f["url"] = url
+                    for finding in parsed:
+                        finding["url"] = url
                     return parsed
                 except Exception as e:
                     logger.exception("Failed to scan %s: %s", url, e)
                     return []
 
-       
         tasks = [asyncio.create_task(_worker(u)) for u in urls]
         all_found = await asyncio.gather(*tasks, return_exceptions=False)
-
-        for sub in all_found:
-            if isinstance(sub, list):
-                results.extend(sub)
+        for subset in all_found:
+            if isinstance(subset, list):
+                results.extend(subset)
         return results
 
 
-# convenience synchronous helper
-def run_sqlmap_sync_direct(url: str, extra_args: Optional[List[str]] = None, forms: Optional[List[Dict[str, Any]]] = None, timeout: int = 600) -> Dict[str, Any]:
-    """
-    Synchronous helper to run sqlmap using Docker SDK directly.
-    """
-    result: Dict[str, Any] = {"ok": False, "error": "unknown"}
-
+def run_sqlmap_sync_direct(
+    url: str,
+    extra_args: Optional[List[str]] = None,
+    forms: Optional[List[Dict[str, Any]]] = None,
+    timeout: int = 600,
+) -> Dict[str, Any]:
     if docker is None:
         return {"ok": False, "error": "docker SDK not available"}
 
     try:
         tester = SQLiTester(fetcher=None)
-        
         safe_url = _rewrite_localhost_for_container(url)
         defaults = [
             "--batch",
@@ -497,12 +467,11 @@ def run_sqlmap_sync_direct(url: str, extra_args: Optional[List[str]] = None, for
             "--risk=2",
             "--threads=5",
         ]
-        args = list(extra_args) if extra_args else defaults
+        args = _merge_sqlmap_args(defaults, extra_args)
 
-        
         if forms:
             for form in forms:
-                method = form.get("method", "get").lower()
+                method = str(form.get("method", "get")).lower()
                 if method != "post":
                     continue
                 inputs = form.get("inputs", {}) or {}
@@ -521,9 +490,7 @@ def run_sqlmap_sync_direct(url: str, extra_args: Optional[List[str]] = None, for
                 break
 
         cmd_args = ["-u", safe_url] + args
-        result = tester._run_sqlmap_container(cmd_args, timeout)
+        return tester._run_sqlmap_container(cmd_args, timeout)
     except Exception as exc:
         logger.exception("run_sqlmap_sync_direct failed")
-        result = {"ok": False, "error": str(exc)}
-
-    return result
+        return {"ok": False, "error": str(exc)}

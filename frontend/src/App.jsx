@@ -1,6 +1,32 @@
 import React, { useState } from "react";
-import ScanForm from "./components/ScanForm";
 import Results from "./components/Results";
+import ScanForm from "./components/ScanForm";
+
+function mergeReport(prev, next) {
+  if (!prev) {
+    return next;
+  }
+  if (!next) {
+    return prev;
+  }
+  if (prev.scan_id && next.scan_id && prev.scan_id !== next.scan_id) {
+    return prev;
+  }
+
+  return {
+    ...prev,
+    ...next,
+    scan_id: next.scan_id ?? prev.scan_id,
+    target: next.target ?? prev.target,
+    report: next.report ?? prev.report,
+    job: next.job ?? prev.job,
+    parts: {
+      ...(prev.parts || {}),
+      ...(next.parts || {}),
+      sqlmap: next.parts?.sqlmap ?? prev.parts?.sqlmap,
+    },
+  };
+}
 
 export default function App() {
   const [report, setReport] = useState(null);
@@ -10,50 +36,59 @@ export default function App() {
   return (
     <div className="container">
       <header className="header">
-        <h1>WebScanner — Dashboard</h1>
-        <p className="subtitle">Fast scans (ports, headers, XSS, SQLi) + optional sqlmap</p>
+        <h1>WebScanner Dashboard</h1>
+        <p className="subtitle">Fast scans for ports, headers, XSS, SQLi, and optional sqlmap follow-up checks.</p>
       </header>
 
       <main>
         <ScanForm
-          onStart={() => {
-            setReport(null);
+          currentReport={report}
+          onBaseStart={() => {
             setError(null);
-            setLoading({ base: true, sqlmap: false });
+            setLoading(prev => ({ ...prev, base: true }));
           }}
-          onDone={(res, sqlmapDone = false) => {
-            if (sqlmapDone) {
-              setReport(prev => ({
-                ...prev,
-                parts: { ...prev?.parts, sqlmap: res.parts?.sqlmap },
-                report: res.report || prev?.report
-              }));
-              setLoading(prev => ({ ...prev, sqlmap: false }));
-            } else {
-              setReport(res);
-              setLoading(prev => ({ ...prev, base: false }));
+          onBaseDone={(res) => {
+            setReport(res);
+            setLoading(prev => ({ ...prev, base: false }));
+          }}
+          onSqlmapStart={(res) => {
+            setError(null);
+            setLoading(prev => ({ ...prev, sqlmap: true }));
+            setReport(prev => mergeReport(prev, res));
+          }}
+          onSqlmapUpdate={(res) => {
+            setReport(prev => mergeReport(prev, res));
+          }}
+          onSqlmapDone={(res) => {
+            setReport(prev => mergeReport(prev, res));
+            setLoading(prev => ({ ...prev, sqlmap: false }));
+          }}
+          onSqlmapError={(message, fallbackReport) => {
+            if (fallbackReport) {
+              setReport(prev => mergeReport(prev, fallbackReport));
             }
+            setError(message);
+            setLoading(prev => ({ ...prev, sqlmap: false }));
           }}
           onError={(err) => {
-            setError(err);
+            setError(err instanceof Error ? err.message : String(err));
             setLoading({ base: false, sqlmap: false });
           }}
         />
 
-        {loading.base && (
-          <div className="notify">Scan running — this may take some time...</div>
-        )}
-        {error && <div className="error">Error: {String(error)}</div>}
+        {loading.base && <div className="notify">Base scan is running. Current results stay visible until the new scan completes.</div>}
+        {!loading.base && loading.sqlmap && <div className="notify">sqlmap deep scan is running in the background. Other tabs remain available.</div>}
+        {error && <div className="error">Error: {error}</div>}
 
         {report && (
           <section style={{ marginTop: 20 }}>
-            <Results parts={report.parts} report={report.report} loading={loading} />
+            <Results parts={report.parts} report={report.report} target={report.target} />
           </section>
         )}
       </main>
 
       <footer className="footer">
-        <small>Tip: for docker setups use host.docker.internal as target host for container-to-host access.</small>
+        <small>Tip: in Docker, keep the frontend talking to `/api` and let nginx proxy requests to the backend.</small>
       </footer>
     </div>
   );
