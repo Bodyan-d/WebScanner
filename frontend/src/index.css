@@ -7,6 +7,7 @@
   --card:#fff;
   --muted:#666;
   --accent:#0b76ef;
+  --accent-hover:#FF6108;
   --border:#eee;
 }
 
@@ -209,7 +210,7 @@ body{
   color:#6b7280;
 }
 
-/* Tabs */
+
 .tabs-row {
   display:flex;
   gap:8px;
@@ -230,7 +231,7 @@ body{
   border-color:#0ea5e9;
 }
 
-/* Table */
+
 .table {
   width:100%;
   border-collapse:collapse;
@@ -260,7 +261,7 @@ body{
   color:#991b1b;
 }
 
-/* URLs */
+
 .urls {
   display:flex;
   flex-direction:column;
@@ -274,7 +275,6 @@ body{
   text-decoration:none;
 }
 
-/* Findings */
 .findings-grid {
   display:grid;
   gap:10px;
@@ -338,7 +338,7 @@ body{
   color:#fbbf24;
 }
 
-/* Raw output */
+
 .raw-output {
   max-height:300px;
   overflow:auto;
@@ -365,6 +365,7 @@ body{
 
 code {
   background: #eee;
+  color: var(--accent-hover);
   padding: 2px 4px;
   border-radius: 4px;
   font-family: monospace;

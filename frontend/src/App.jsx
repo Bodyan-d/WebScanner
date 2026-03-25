@@ -76,8 +76,8 @@ export default function App() {
           }}
         />
 
-        {loading.base && <div className="notify">Base scan is running. Current results stay visible until the new scan completes.</div>}
-        {!loading.base && loading.sqlmap && <div className="notify">sqlmap deep scan is running in the background. Other tabs remain available.</div>}
+        {loading.base && <div className="notify">Scan is running. It may take some time...</div>}
+        {!loading.base && loading.sqlmap && <div className="notify">Sqlmap deep scan is running in the background.</div>}
         {error && <div className="error">Error: {error}</div>}
 
         {report && (
