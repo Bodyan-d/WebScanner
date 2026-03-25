@@ -110,6 +110,7 @@ Important backend environment variables:
   How long base scan results stay available for follow-up `sqlmap`
 - `SQLMAP_MAX_URLS`
   How many URLs from the crawl can be passed to `sqlmap`
+  Use `0` to allow all crawler URLs
 - `ENABLE_DOM_XSS`
   Enables Playwright-based DOM confirmation checks
 - `SERVICE_DETECTION_ENABLED`
@@ -392,9 +393,11 @@ python -m pytest
 
 - The frontend now expects `/api` by default, which works both with Vite proxy and nginx proxy.
 - Large base scans no longer depend on one long-lived nginx request. The frontend starts the scan, then polls `GET /api/scan_no_sqlmap/{job_id}` until the report is ready.
+- Base scan now arrives in stages: `ports + headers + crawl` first, then `port CVE enrichment + XSS + SQLi` continue in the background and fill the open tabs progressively.
 - The Ports tab is now compact by default and expandable per port. Each row shows the port, detected service, highest risk band, and number of CVE matches; clicking the row opens full details.
 - CVE mapping is heuristic because it is based on detected service fingerprints, not a guaranteed asset inventory. Treat it as enrichment for triage, not as a formal proof that a host is vulnerable.
 - The scanner combines NVD and Vulnerability Lookup results and ranks each port by the highest matched CVSS score.
+- `sqlmap` now accepts the full crawler URL set by default and prioritizes parameterized/form URLs first. Plain URLs fall back to lightweight crawl-assisted probing when needed.
 - The frontend keeps the already loaded report visible while a follow-up `sqlmap` job is queued or running; only the `sqlmap` tab changes state.
 - Long `sqlmap` runs no longer rely on a single long-lived nginx request. The backend returns a job id immediately, and the frontend polls status updates.
 - If you want stricter protection, set `API_KEY` in the backend and `VITE_API_KEY` in the frontend.

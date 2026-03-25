@@ -28,6 +28,15 @@ function mergeReport(prev, next) {
   };
 }
 
+function hasVisibleBaseData(report) {
+  const parts = report?.parts || {};
+  return Boolean(
+    parts?.ports ||
+    parts?.headers ||
+    (Array.isArray(parts?.crawl?.urls) && parts.crawl.urls.length > 0)
+  );
+}
+
 export default function App() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState({ base: false, sqlmap: false });
@@ -46,6 +55,17 @@ export default function App() {
           onBaseStart={() => {
             setError(null);
             setLoading(prev => ({ ...prev, base: true }));
+          }}
+          onBaseUpdate={(res) => {
+            setReport(prev => {
+              if (!prev) {
+                return hasVisibleBaseData(res) ? mergeReport(prev, res) : prev;
+              }
+              if (prev.scan_id === res?.scan_id) {
+                return mergeReport(prev, res);
+              }
+              return hasVisibleBaseData(res) ? res : prev;
+            });
           }}
           onBaseDone={(res) => {
             setReport(res);
@@ -82,7 +102,7 @@ export default function App() {
 
         {report && (
           <section style={{ marginTop: 20 }}>
-            <Results parts={report.parts} report={report.report} target={report.target} />
+            <Results parts={report.parts} report={report.report} target={report.target} job={report.job} />
           </section>
         )}
       </main>

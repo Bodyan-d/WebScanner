@@ -427,6 +427,7 @@ async def enrich_port_report(report: Dict[str, Any]) -> Dict[str, Any]:
             "highest_severity": "None",
             "ports_with_vulnerabilities": 0,
         }
+        report["lookup_status"] = "completed"
         return report
 
     timeout = aiohttp.ClientTimeout(total=max(3, PORT_VULN_REQUEST_TIMEOUT_SECONDS))
@@ -461,4 +462,5 @@ async def enrich_port_report(report: Dict[str, Any]) -> Dict[str, Any]:
         "highest_severity": cvss_to_severity(highest),
         "ports_with_vulnerabilities": ports_with_vulns,
     }
+    report["lookup_status"] = "completed"
     return report

@@ -28,6 +28,18 @@ KNOWN_PORT_NAMES = {
 }
 
 
+def _apply_port_summary(report: Dict[str, Any]) -> Dict[str, Any]:
+    items = report.get("items") or []
+    report["summary"] = {
+        "open_port_count": len(items),
+        "highest_cvss": None,
+        "highest_severity": "None",
+        "ports_with_vulnerabilities": 0,
+    }
+    report["lookup_status"] = "pending"
+    return report
+
+
 async def _tcp_check(host, port, timeout=PORT_SCAN_TIMEOUT_SECONDS):
     loop = asyncio.get_running_loop()
 
@@ -254,10 +266,11 @@ async def detect_service(host: str, port: int) -> Optional[Dict[str, Any]]:
     return None
 
 
-async def scan_ports(host: str, ports=TOP_PORTS) -> Dict[str, Any]:
+async def scan_ports(host: str, ports=TOP_PORTS, include_vulnerabilities: bool = True) -> Dict[str, Any]:
     nmap = await asyncio.to_thread(nmap_scan, host, ports)
     if isinstance(nmap, dict) and nmap.get("ok"):
-        return await enrich_port_report(nmap)
+        report = nmap
+        return await enrich_port_report(report) if include_vulnerabilities else _apply_port_summary(report)
 
     tcp = await tcp_scan(host, ports)
     items = []
@@ -285,4 +298,4 @@ async def scan_ports(host: str, ports=TOP_PORTS) -> Dict[str, Any]:
         "items": items,
         "fallback_reason": nmap.get("error") if isinstance(nmap, dict) else None,
     }
-    return await enrich_port_report(report)
+    return await enrich_port_report(report) if include_vulnerabilities else _apply_port_summary(report)

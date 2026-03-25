@@ -4,6 +4,7 @@ import re
 import time
 import uuid
 from collections import defaultdict, deque
+from copy import deepcopy
 from contextlib import suppress
 from typing import Any, Deque, Dict, List, Optional, Union, cast
 from urllib.parse import urlparse
@@ -34,6 +35,7 @@ from .models import scans
 from .port_scanner import scan_ports
 from .reporter import build_report
 from .sqli_tester import SQLiTester
+from .vuln_lookup import enrich_port_report
 from .xss_tester import XSSTester
 
 app = FastAPI(title="WebScanner API")
@@ -332,6 +334,8 @@ def _serialize_job(job: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         "scan_id": job["scan_id"],
         "kind": job.get("kind"),
         "status": job["status"],
+        "stage": job.get("stage"),
+        "pending_parts": job.get("pending_parts", []),
         "error": job.get("error"),
         "created_at": job.get("created_at"),
         "updated_at": job.get("updated_at"),
@@ -474,12 +478,18 @@ def _form_has_inputs(form: Any) -> bool:
 
 
 def _select_sqlmap_targets(target: str, crawl_res: Any, forms: List[Any]) -> List[str]:
-    candidates: List[str] = []
+    prioritized: List[str] = []
+    secondary: List[str] = []
     urls = _ensure_list_of_str(crawl_res.get("urls", []) if isinstance(crawl_res, dict) else crawl_res)
+
     for url in urls:
         parsed = urlparse(url)
-        if parsed.scheme in {"http", "https"} and parsed.query:
-            candidates.append(url)
+        if parsed.scheme not in {"http", "https"}:
+            continue
+        if parsed.query:
+            prioritized.append(url)
+        else:
+            secondary.append(url)
 
     for form in _normalize_forms(forms):
         inputs = form.get("inputs") or {}
@@ -487,19 +497,24 @@ def _select_sqlmap_targets(target: str, crawl_res: Any, forms: List[Any]) -> Lis
         if isinstance(form_url, str) and inputs:
             parsed = urlparse(form_url)
             if parsed.scheme in {"http", "https"}:
-                candidates.append(form_url)
+                prioritized.append(form_url)
 
     target_parsed = urlparse(target)
-    if target_parsed.query:
-        candidates.append(target)
+    if target_parsed.scheme in {"http", "https"}:
+        if target_parsed.query:
+            prioritized.append(target)
+        else:
+            secondary.append(target)
 
-    deduped = list(dict.fromkeys(candidates))
-    return deduped[:SQLMAP_MAX_URLS]
+    deduped = list(dict.fromkeys(prioritized + secondary))
+    if SQLMAP_MAX_URLS > 0:
+        return deduped[:SQLMAP_MAX_URLS]
+    return deduped
 
 
-async def _scan_ports(host) :
+async def _scan_ports(host, include_vulnerabilities: bool = True) :
     try:
-        return await scan_ports(host)
+        return await scan_ports(host, include_vulnerabilities=include_vulnerabilities)
     except Exception as e:
         return {"error": str(e)}
 
@@ -556,6 +571,12 @@ async def _scan_basic_sqli(urls: List[str], concurrency: int) -> List[Dict[str, 
     return _dedupe_findings(findings)
 
 
+async def _scan_port_vulnerabilities(ports: Any) -> Any:
+    if not isinstance(ports, dict) or not isinstance(ports.get("items"), list):
+        return ports
+    return await enrich_port_report(deepcopy(ports))
+
+
 def _empty_scan_parts() -> Dict[str, Any]:
     return {
         "ports": None,
@@ -579,39 +600,98 @@ def _create_scan_entry(target: str, scan_id: Optional[str] = None) -> Dict[str, 
 
 
 async def _execute_base_scan(req: ScanRequest, scan_entry: Dict[str, Any]) -> Dict[str, Any]:
+    await _run_fast_stage(req, scan_entry)
+    await _run_post_processing(scan_entry, req)
+    return _build_scan_response(scan_entry["scan_id"], scan_entry)
+
+
+async def _run_fast_stage(req: ScanRequest, scan_entry: Dict[str, Any]) -> Dict[str, Any]:
     target = str(req.url)
     host = req.url.host
 
     crawler = Crawler(base_url=target, concurrency=req.concurrency, max_pages=req.max_pages)
-    ports_task = asyncio.create_task(_scan_ports(host))
+    ports_task = asyncio.create_task(_scan_ports(host, include_vulnerabilities=False))
     headers_task = asyncio.create_task(_scan_headers(target))
     crawl_task = asyncio.create_task(crawler.crawl())
 
     ports, header_res, crawl_res = await asyncio.gather(ports_task, headers_task, crawl_task)
-
-    urls = _ensure_list_of_str(crawl_res.get("urls", []) if isinstance(crawl_res, dict) else crawl_res)
-    forms = _ensure_forms(crawl_res.get("forms", []) if isinstance(crawl_res, dict) else None)
-
-    xss_task = asyncio.create_task(_scan_xss(urls, forms, req.concurrency))
-    sqli_task = asyncio.create_task(_scan_basic_sqli(urls, req.concurrency))
-    xss_results, sqli_results = await asyncio.gather(xss_task, sqli_task)
-
-    parts = {
-        "ports": ports,
-        "crawl": crawl_res,
-        "headers": header_res,
-        "xss": xss_results,
-        "sqli": sqli_results,
-        "sqlmap": None,
-    }
-
     scan_entry["target"] = target
-    scan_entry["parts"] = parts
-    scan_entry["report_path"] = build_report(target, parts)
+    scan_entry["parts"]["ports"] = ports
+    scan_entry["parts"]["headers"] = header_res
+    scan_entry["parts"]["crawl"] = crawl_res
+    scan_entry["report_path"] = build_report(target, scan_entry["parts"])
     scan_entry["created_at"] = time.monotonic()
     SCAN_CACHE[scan_entry["scan_id"]] = scan_entry
     await _persist_scan(scan_entry)
-    return _build_scan_response(scan_entry["scan_id"], scan_entry)
+    return {
+        "urls": _ensure_list_of_str(crawl_res.get("urls", []) if isinstance(crawl_res, dict) else crawl_res),
+        "forms": _ensure_forms(crawl_res.get("forms", []) if isinstance(crawl_res, dict) else None),
+    }
+
+
+async def _run_post_processing(scan_entry: Dict[str, Any], req: ScanRequest, job: Optional[Dict[str, Any]] = None):
+    crawl_res = scan_entry["parts"].get("crawl", {})
+    urls = _ensure_list_of_str(crawl_res.get("urls", []) if isinstance(crawl_res, dict) else crawl_res)
+    forms = _ensure_forms(crawl_res.get("forms", []) if isinstance(crawl_res, dict) else None)
+
+    task_map: Dict[asyncio.Task[Any], str] = {}
+
+    task_map[asyncio.create_task(_scan_port_vulnerabilities(scan_entry["parts"].get("ports")))] = "port_vulnerabilities"
+    if urls or forms:
+        task_map[asyncio.create_task(_scan_xss(urls, forms, req.concurrency))] = "xss"
+    else:
+        scan_entry["parts"]["xss"] = []
+    if _filter_query_urls(urls):
+        task_map[asyncio.create_task(_scan_basic_sqli(urls, req.concurrency))] = "sqli"
+    else:
+        scan_entry["parts"]["sqli"] = []
+
+    if job is not None:
+        job["stage"] = "post_processing"
+        job["pending_parts"] = list(task_map.values())
+        job["scanned_urls"] = urls
+        job["updated_at"] = time.monotonic()
+
+    if not task_map:
+        scan_entry["report_path"] = build_report(scan_entry["target"], scan_entry["parts"])
+        scan_entry["created_at"] = time.monotonic()
+        await _persist_scan(scan_entry)
+        return
+
+    while task_map:
+        done, _ = await asyncio.wait(task_map.keys(), return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            part = task_map.pop(task)
+            try:
+                result = task.result()
+            except Exception as exc:
+                if part == "port_vulnerabilities":
+                    ports = scan_entry["parts"].get("ports")
+                    if isinstance(ports, dict):
+                        ports["lookup_status"] = "failed"
+                        ports["lookup_error"] = str(exc)
+                elif part == "xss":
+                    result = []
+                elif part == "sqli":
+                    result = []
+                else:
+                    result = None
+
+            if part == "port_vulnerabilities" and isinstance(result, dict):
+                scan_entry["parts"]["ports"] = result
+            elif part == "xss" and isinstance(result, list):
+                scan_entry["parts"]["xss"] = result
+            elif part == "sqli" and isinstance(result, list):
+                scan_entry["parts"]["sqli"] = result
+
+            scan_entry["report_path"] = build_report(scan_entry["target"], scan_entry["parts"])
+            scan_entry["created_at"] = time.monotonic()
+            await _persist_scan(scan_entry)
+
+            if job is not None:
+                job["pending_parts"] = [name for name in job.get("pending_parts", []) if name != part]
+                job["stage"] = f"{part}_completed" if job["pending_parts"] else "completed"
+                job["updated_at"] = time.monotonic()
 
 
 async def _run_base_scan(req: ScanRequest) -> Dict[str, Any]:
@@ -635,14 +715,24 @@ async def _run_base_scan_job(job_id: str, req: ScanRequest):
 
     try:
         job["status"] = "running"
+        job["stage"] = "fast_scan"
+        job["pending_parts"] = ["ports", "headers", "crawl", "port_vulnerabilities", "xss", "sqli"]
         job["updated_at"] = time.monotonic()
         scan_entry["created_at"] = time.monotonic()
-        await _execute_base_scan(req, scan_entry)
+        fast_stage = await _run_fast_stage(req, scan_entry)
+        job["pending_parts"] = ["port_vulnerabilities", "xss", "sqli"]
+        job["scanned_urls"] = fast_stage.get("urls", [])
+        job["stage"] = "post_processing"
+        job["updated_at"] = time.monotonic()
+        await _run_post_processing(scan_entry, req, job)
         job["status"] = "completed"
+        job["stage"] = "completed"
+        job["pending_parts"] = []
         job["error"] = None
         job["updated_at"] = time.monotonic()
     except Exception as exc:
         job["status"] = "failed"
+        job["stage"] = "failed"
         job["error"] = str(exc)
         job["updated_at"] = time.monotonic()
     finally:
@@ -660,6 +750,8 @@ async def _enqueue_base_scan_job(req: ScanRequest) -> Dict[str, Any]:
         "scan_id": scan_entry["scan_id"],
         "kind": "base_scan",
         "status": "queued",
+        "stage": "queued",
+        "pending_parts": ["ports", "headers", "crawl", "port_vulnerabilities", "xss", "sqli"],
         "error": None,
         "created_at": time.monotonic(),
         "updated_at": time.monotonic(),
@@ -820,7 +912,7 @@ async def _enqueue_sqlmap_job(req: ScanRequest) -> Dict[str, Any]:
         "forms": _normalize_forms(forms),
         "extra_args": sanitize_sqlmap_args(req.sqlmap_args or []),
         "timeout": 600,
-        "concurrency": min(3, max(1, req.concurrency)),
+        "concurrency": min(4, max(1, req.concurrency)),
     }
     SQLMAP_JOBS[job_id] = job
 

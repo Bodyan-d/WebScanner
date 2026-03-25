@@ -26,6 +26,7 @@ function normalizeTarget(value) {
 export default function ScanForm({
   currentReport,
   onBaseStart,
+  onBaseUpdate,
   onBaseDone,
   onSqlmapStart,
   onSqlmapUpdate,
@@ -66,6 +67,7 @@ export default function ScanForm({
       if (!isActiveRun(runId)) {
         return null;
       }
+      onBaseUpdate?.(payload);
 
       const status = payload?.job?.status;
       if (status === "completed") {

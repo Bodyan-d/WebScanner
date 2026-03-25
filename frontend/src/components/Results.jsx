@@ -46,7 +46,7 @@ function RiskChip({ risk }) {
   );
 }
 
-function PortsView({ parts }) {
+function PortsView({ parts, pendingPortVulns = false }) {
   const ports = parts?.ports ?? null;
   const portItems = Array.isArray(ports?.items) ? ports.items : null;
   const portSummary = ports?.summary ?? {};
@@ -61,6 +61,12 @@ function PortsView({ parts }) {
 
   return (
     <div>
+      {pendingPortVulns && (
+        <div className="notify-panel" style={{ marginBottom: 12 }}>
+          Service detection is ready. CVE enrichment for open ports is still running in the background.
+        </div>
+      )}
+
       <div className="ports-summary">
         <div>
           <strong>Open ports:</strong> {portSummary?.open_port_count ?? portItems.length}
@@ -231,7 +237,11 @@ function HeadersView({ parts }) {
   );
 }
 
-function FindingsList({ items = [], type = "Finding" }) {
+function FindingsList({ items = [], type = "Finding", pending = false, pendingMessage = "" }) {
+  if (pending && !items.length) {
+    return <div className="notify-panel">{pendingMessage || `${type} checks are still running.`}</div>;
+  }
+
   if (!items.length) {
     return <div className="secure-panel">No {type} findings were detected.</div>;
   }
@@ -368,10 +378,11 @@ function SqlmapView({ sqlmap }) {
   );
 }
 
-export default function Results({ parts = {}, report, target }) {
+export default function Results({ parts = {}, report, target, job }) {
   const [active, setActive] = useState("ports");
   const sqlmapStatus = parts?.sqlmap?.status;
   const sqlmapTitle = sqlmapStatus && sqlmapStatus !== "completed" ? `sqlmap (${sqlmapStatus})` : "sqlmap";
+  const pendingParts = Array.isArray(job?.pending_parts) ? job.pending_parts : [];
 
   const countUrls = Array.isArray(parts?.crawl?.urls) ? parts.crawl.urls.length : 0;
   const tabs = [
@@ -404,11 +415,25 @@ export default function Results({ parts = {}, report, target }) {
       </div>
 
       <div style={{ marginTop: 16 }}>
-        {active === "ports" && <PortsView parts={parts} />}
+        {active === "ports" && <PortsView parts={parts} pendingPortVulns={pendingParts.includes("port_vulnerabilities")} />}
         {active === "urls" && <URLsView parts={parts} />}
         {active === "headers" && <HeadersView parts={parts} />}
-        {active === "xss" && <FindingsList items={parts?.xss || []} type="XSS" />}
-        {active === "sqli" && <FindingsList items={parts?.sqli || []} type="SQLi" />}
+        {active === "xss" && (
+          <FindingsList
+            items={parts?.xss || []}
+            type="XSS"
+            pending={pendingParts.includes("xss")}
+            pendingMessage="XSS checks are still running in the background."
+          />
+        )}
+        {active === "sqli" && (
+          <FindingsList
+            items={parts?.sqli || []}
+            type="SQLi"
+            pending={pendingParts.includes("sqli")}
+            pendingMessage="SQLi checks are still running in the background."
+          />
+        )}
         {active === "sqlmap" && <SqlmapView sqlmap={parts?.sqlmap} />}
       </div>
     </div>

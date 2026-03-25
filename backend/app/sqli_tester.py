@@ -406,6 +406,14 @@ class SQLiTester:
         if not urls:
             return results
 
+        normalized_forms: List[Dict[str, Any]] = []
+        for raw in forms or []:
+            if isinstance(raw, dict):
+                normalized_forms.append(cast(Dict[str, Any], raw))
+
+        ordered_urls = list(dict.fromkeys(urls))
+        ordered_urls.sort(key=lambda item: (not bool(urlparse(item).query), item))
+
         raw_image = (SQLMAP_IMAGE or "").strip() or "spsproject-sqlmap:latest"
         image = raw_image.lstrip("/")
 
@@ -422,12 +430,22 @@ class SQLiTester:
                 try:
                     logger.info("Running sqlmap on %s", url)
                     local_extra = list(extra_args) if extra_args else []
+                    matching_forms = [
+                        form
+                        for form in normalized_forms
+                        if str(form.get("url") or form.get("action") or "").strip() == url
+                    ]
                     if not any(a.startswith("--crawl") for a in local_extra):
-                        local_extra.append("--crawl=0")
+                        local_extra.append("--crawl=0" if urlparse(url).query or matching_forms else "--crawl=1")
                     if not any(a.startswith("--threads") for a in local_extra):
                         local_extra.append("--threads=10")
 
-                    res = await self.run_sqlmap_async(url, extra_args=local_extra, forms=forms, timeout=timeout)
+                    res = await self.run_sqlmap_async(
+                        url,
+                        extra_args=local_extra,
+                        forms=matching_forms or None,
+                        timeout=timeout,
+                    )
                     if not res.get("ok"):
                         logger.warning("sqlmap failed on %s: %s", url, res.get("error"))
                         return []
@@ -440,7 +458,7 @@ class SQLiTester:
                     logger.exception("Failed to scan %s: %s", url, e)
                     return []
 
-        tasks = [asyncio.create_task(_worker(u)) for u in urls]
+        tasks = [asyncio.create_task(_worker(u)) for u in ordered_urls]
         all_found = await asyncio.gather(*tasks, return_exceptions=False)
         for subset in all_found:
             if isinstance(subset, list):
