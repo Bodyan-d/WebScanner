@@ -16,32 +16,183 @@ const niceJSON = value => {
   }
 };
 
+const riskClass = severity => {
+  const value = String(severity || "").toLowerCase();
+  if (value.includes("critical")) return "critical";
+  if (value.includes("high")) return "high";
+  if (value.includes("medium")) return "medium";
+  if (value.includes("low")) return "low";
+  return "none";
+};
+
+const formatScore = score => (typeof score === "number" ? score.toFixed(1) : "n/a");
+
+function formatServiceLabel(service = {}) {
+  const chunks = [];
+  if (service?.name) chunks.push(service.name);
+  if (service?.product && service.product !== service.name) chunks.push(service.product);
+  if (service?.version) chunks.push(service.version);
+  return chunks.join(" • ") || "Unknown service";
+}
+
+function RiskChip({ risk }) {
+  const severity = risk?.severity || "None";
+  const score = risk?.highest_cvss;
+  return (
+    <span className={`risk-chip ${riskClass(severity)}`}>
+      {severity}
+      {typeof score === "number" && ` ${formatScore(score)}`}
+    </span>
+  );
+}
+
 function PortsView({ parts }) {
   const ports = parts?.ports ?? null;
-  const tcp = ports?.tcp ?? (ports?.nmap && ports.nmap.ports) ?? null;
-  if (!tcp || typeof tcp !== "object") {
+  const portItems = Array.isArray(ports?.items) ? ports.items : null;
+  const portSummary = ports?.summary ?? {};
+
+  if (!portItems) {
     return <pre className="mono">{niceJSON(ports)}</pre>;
   }
-  const entries = Object.entries(tcp).sort((a, b) => Number(a[0]) - Number(b[0]));
+
+  if (!portItems.length) {
+    return <div className="secure-panel">No open ports were detected in the configured top-port set.</div>;
+  }
+
   return (
-    <table className="table">
-      <thead>
-        <tr>
-          <th>Port</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {entries.map(([port, isOpen]) => (
-          <tr key={port}>
-            <td style={{ width: 80 }}>{port}</td>
-            <td>
-              <span className={`badge ${isOpen ? "open" : "closed"}`}>{isOpen ? "open" : "closed"}</span>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div>
+      <div className="ports-summary">
+        <div>
+          <strong>Open ports:</strong> {portSummary?.open_port_count ?? portItems.length}
+        </div>
+        <div>
+          <strong>Highest risk:</strong>{" "}
+          <RiskChip risk={{ severity: portSummary?.highest_severity, highest_cvss: portSummary?.highest_cvss }} />
+        </div>
+        <div>
+          <strong>Ports with CVE matches:</strong> {portSummary?.ports_with_vulnerabilities ?? 0}
+        </div>
+      </div>
+
+      {ports?.fallback_reason && (
+        <div className="muted" style={{ marginBottom: 12 }}>
+          nmap service detection was unavailable, so the scanner used lightweight banner probing. Details may be less precise.
+        </div>
+      )}
+
+      <div className="port-list">
+        {portItems.map(item => {
+          const service = item?.service || {};
+          const vulnerabilities = Array.isArray(item?.vulnerabilities) ? item.vulnerabilities : [];
+          return (
+            <details key={`${item.port}-${item.protocol || "tcp"}`} className="port-accordion">
+              <summary className="port-summary">
+                <div className="port-summary-main">
+                  <span className="port-code">{item.port}/{item.protocol || "tcp"}</span>
+                  <span className={`badge ${item.open ? "open" : "closed"}`}>{item.state || (item.open ? "open" : "closed")}</span>
+                  <span className="service-pill">{formatServiceLabel(service)}</span>
+                </div>
+                <div className="port-summary-meta">
+                  <RiskChip risk={item?.risk} />
+                  <span className="muted">{item?.risk?.cve_count || 0} CVE matches</span>
+                </div>
+              </summary>
+
+              <div className="port-details">
+                <div className="port-detail-grid">
+                  <div>
+                    <strong>Detected service</strong>
+                    <div>{service?.name || "Unknown"}</div>
+                  </div>
+                  <div>
+                    <strong>Product</strong>
+                    <div>{service?.product || "Unknown"}</div>
+                  </div>
+                  <div>
+                    <strong>Version</strong>
+                    <div>{service?.version || "Unknown"}</div>
+                  </div>
+                  <div>
+                    <strong>Detection</strong>
+                    <div>{service?.detection || "Unknown"}</div>
+                  </div>
+                  <div>
+                    <strong>Risk</strong>
+                    <div>
+                      <RiskChip risk={item?.risk} />
+                    </div>
+                  </div>
+                  <div>
+                    <strong>Sources</strong>
+                    <div>NVD API + Vulnerability Lookup</div>
+                  </div>
+                </div>
+
+                {service?.banner && (
+                  <div style={{ marginTop: 12 }}>
+                    <strong>Banner / server hint</strong>
+                    <pre className="mono small-block" style={{ marginTop: 6 }}>{service.banner}</pre>
+                  </div>
+                )}
+
+                {service?.extrainfo && (
+                  <div style={{ marginTop: 12 }}>
+                    <strong>Extra info</strong>
+                    <div style={{ marginTop: 6 }}>{service.extrainfo}</div>
+                  </div>
+                )}
+
+                {item?.lookup_error && (
+                  <div className="muted" style={{ marginTop: 12 }}>
+                    CVE lookup warning: {item.lookup_error}
+                  </div>
+                )}
+
+                {!vulnerabilities.length && (
+                  <div className="secure-panel" style={{ marginTop: 12 }}>
+                    No CVE matches were found for the detected service fingerprint.
+                  </div>
+                )}
+
+                {!!vulnerabilities.length && (
+                  <div className="vuln-list">
+                    {vulnerabilities.map(vuln => (
+                      <div key={vuln.id} className="vuln-card">
+                        <div className="vuln-card-header">
+                          <div>
+                            <strong>{vuln.id}</strong>
+                            <div className="muted small" style={{ marginTop: 4 }}>
+                              {(vuln.sources || [vuln.source]).join(", ")}
+                            </div>
+                          </div>
+                          <RiskChip risk={{ severity: vuln.severity, highest_cvss: vuln.cvss }} />
+                        </div>
+                        {vuln.summary && <div style={{ marginTop: 10 }}>{vuln.summary}</div>}
+                        <div className="vuln-meta">
+                          <span>Published: {vuln.published || "Unknown"}</span>
+                          <span>Updated: {vuln.last_modified || "Unknown"}</span>
+                          <span>CVSS: {formatScore(vuln.cvss)}</span>
+                        </div>
+                        {vuln.vector && (
+                          <div style={{ marginTop: 8 }}>
+                            <code>{vuln.vector}</code>
+                          </div>
+                        )}
+                        {vuln.link && (
+                          <div style={{ marginTop: 8 }}>
+                            <a href={vuln.link} target="_blank" rel="noreferrer">Open advisory</a>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

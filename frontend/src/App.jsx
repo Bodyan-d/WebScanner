@@ -37,7 +37,7 @@ export default function App() {
     <div className="container">
       <header className="header">
         <h1>WebScanner Dashboard</h1>
-        <p className="subtitle">Fast scans for ports, headers, XSS, SQLi, and optional sqlmap follow-up checks.</p>
+        <p className="subtitle">Fast scans for ports, service fingerprints, CVE risk, headers, XSS, SQLi, and optional sqlmap follow-up checks.</p>
       </header>
 
       <main>
@@ -76,8 +76,8 @@ export default function App() {
           }}
         />
 
-        {loading.base && <div className="notify">Scan is running. It may take some time...</div>}
-        {!loading.base && loading.sqlmap && <div className="notify">Sqlmap deep scan is running in the background.</div>}
+        {loading.base && <div className="notify">Base scan is running in the background. Current results stay visible until the new scan completes.</div>}
+        {!loading.base && loading.sqlmap && <div className="notify">Sqlmap deep scan is running in the background. Other tabs remain available.</div>}
         {error && <div className="error">Error: {error}</div>}
 
         {report && (

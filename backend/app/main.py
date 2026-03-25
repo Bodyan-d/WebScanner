@@ -20,6 +20,7 @@ from .config import (
     MAX_CONCURRENCY,
     MAX_PAGES_LIMIT,
     RATE_LIMIT_MAX_REQUESTS,
+    STATUS_POLL_RATE_LIMIT_MAX_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
     SCAN_CACHE_TTL_SECONDS,
     SQLMAP_MAX_URLS,
@@ -30,7 +31,7 @@ from .db import database
 from .fetcher import Fetcher
 from .headers_checker import check_headers
 from .models import scans
-from .port_scanner import nmap_scan, tcp_scan
+from .port_scanner import scan_ports
 from .reporter import build_report
 from .sqli_tester import SQLiTester
 from .xss_tester import XSSTester
@@ -55,9 +56,12 @@ class ScanRequest(BaseModel):
 
 
 SCAN_CACHE: Dict[str, Dict[str, Any]] = {}
+BASE_SCAN_JOBS: Dict[str, Dict[str, Any]] = {}
+BASE_SCAN_TASKS: Dict[str, asyncio.Task[Any]] = {}
 SQLMAP_JOBS: Dict[str, Dict[str, Any]] = {}
 SQLMAP_TASKS: Dict[str, asyncio.Task[Any]] = {}
 RATE_LIMITS: Dict[str, Deque[float]] = defaultdict(deque)
+STATUS_POLL_PREFIXES = ("/api/scan_no_sqlmap/", "/api/scan_sqlmap/")
 
 
 def sanitize_sqlmap_args(args):
@@ -98,8 +102,13 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
+    for task in BASE_SCAN_TASKS.values():
+        task.cancel()
     for task in SQLMAP_TASKS.values():
         task.cancel()
+    for task in BASE_SCAN_TASKS.values():
+        with suppress(asyncio.CancelledError):
+            await task
     for task in SQLMAP_TASKS.values():
         with suppress(asyncio.CancelledError):
             await task
@@ -112,6 +121,7 @@ async def healthcheck():
         "ok": True,
         "sqlmap_enabled": USE_SQLMAP,
         "cache_items": len(SCAN_CACHE),
+        "base_scan_jobs": len(BASE_SCAN_JOBS),
         "sqlmap_jobs": len(SQLMAP_JOBS),
     }
 
@@ -266,6 +276,17 @@ def _count_open_ports(parts: Dict[str, Any]) -> List[int]:
     if not isinstance(ports, dict):
         return []
 
+    port_map = ports.get("ports")
+    if isinstance(port_map, dict):
+        open_ports = []
+        for port, is_open in port_map.items():
+            if is_open:
+                try:
+                    open_ports.append(int(port))
+                except (TypeError, ValueError):
+                    continue
+        return sorted(open_ports)
+
     tcp_ports = ports.get("tcp")
     if isinstance(tcp_ports, dict):
         open_ports = []
@@ -309,6 +330,7 @@ def _serialize_job(job: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     return {
         "job_id": job["job_id"],
         "scan_id": job["scan_id"],
+        "kind": job.get("kind"),
         "status": job["status"],
         "error": job.get("error"),
         "created_at": job.get("created_at"),
@@ -375,6 +397,10 @@ def _cleanup_runtime_state():
     now = time.monotonic()
     active_scan_ids = {
         job["scan_id"]
+        for job in BASE_SCAN_JOBS.values()
+        if job.get("status") in {"queued", "running"}
+    } | {
+        job["scan_id"]
         for job in SQLMAP_JOBS.values()
         if job.get("status") in {"queued", "running"}
     }
@@ -386,6 +412,16 @@ def _cleanup_runtime_state():
     ]
     for scan_id in expired_scans:
         SCAN_CACHE.pop(scan_id, None)
+
+    expired_base_jobs = [
+        job_id
+        for job_id, job in BASE_SCAN_JOBS.items()
+        if job.get("status") not in {"queued", "running"}
+        and now - job.get("updated_at", now) > SCAN_CACHE_TTL_SECONDS
+    ]
+    for job_id in expired_base_jobs:
+        BASE_SCAN_JOBS.pop(job_id, None)
+        BASE_SCAN_TASKS.pop(job_id, None)
 
     expired_jobs = [
         job_id
@@ -407,14 +443,20 @@ def _enforce_request_access(request: Request):
         client_host = request.client.host
     client_host = client_host or "unknown"
 
+    path = request.url.path.rstrip("/")
+    is_status_poll = request.method == "GET" and any(path.startswith(prefix.rstrip("/")) for prefix in STATUS_POLL_PREFIXES)
+    bucket_key = f"{client_host}:status" if is_status_poll else f"{client_host}:default"
+    max_requests = STATUS_POLL_RATE_LIMIT_MAX_REQUESTS if is_status_poll else RATE_LIMIT_MAX_REQUESTS
+
     now = time.monotonic()
-    bucket = RATE_LIMITS[client_host]
+    bucket = RATE_LIMITS[bucket_key]
     while bucket and now - bucket[0] > RATE_LIMIT_WINDOW_SECONDS:
         bucket.popleft()
-    if len(bucket) >= RATE_LIMIT_MAX_REQUESTS:
+    if len(bucket) >= max_requests:
+        detail = "Status polling rate limit exceeded." if is_status_poll else "Rate limit exceeded."
         raise HTTPException(
             status_code=429,
-            detail=f"Rate limit exceeded. Try again in about {RATE_LIMIT_WINDOW_SECONDS} seconds.",
+            detail=f"{detail} Try again in about {RATE_LIMIT_WINDOW_SECONDS} seconds.",
         )
     bucket.append(now)
 
@@ -457,11 +499,7 @@ def _select_sqlmap_targets(target: str, crawl_res: Any, forms: List[Any]) -> Lis
 
 async def _scan_ports(host) :
     try:
-        nmap = await asyncio.to_thread(nmap_scan, host)
-        if isinstance(nmap, dict) and nmap.get("ok"):
-            return {"nmap": nmap}
-        tcp = await tcp_scan(host)
-        return {"tcp": tcp}
+        return await scan_ports(host)
     except Exception as e:
         return {"error": str(e)}
 
@@ -518,7 +556,29 @@ async def _scan_basic_sqli(urls: List[str], concurrency: int) -> List[Dict[str, 
     return _dedupe_findings(findings)
 
 
-async def _run_base_scan(req: ScanRequest) -> Dict[str, Any]:
+def _empty_scan_parts() -> Dict[str, Any]:
+    return {
+        "ports": None,
+        "crawl": {"urls": [], "forms": []},
+        "headers": None,
+        "xss": [],
+        "sqli": [],
+        "sqlmap": None,
+    }
+
+
+def _create_scan_entry(target: str, scan_id: Optional[str] = None) -> Dict[str, Any]:
+    return {
+        "scan_id": scan_id or str(uuid.uuid4()),
+        "created_at": time.monotonic(),
+        "db_id": None,
+        "target": target,
+        "parts": _empty_scan_parts(),
+        "report_path": None,
+    }
+
+
+async def _execute_base_scan(req: ScanRequest, scan_entry: Dict[str, Any]) -> Dict[str, Any]:
     target = str(req.url)
     host = req.url.host
 
@@ -545,19 +605,69 @@ async def _run_base_scan(req: ScanRequest) -> Dict[str, Any]:
         "sqlmap": None,
     }
 
-    report_path = build_report(target, parts)
-    scan_id = str(uuid.uuid4())
-    scan_entry = {
-        "scan_id": scan_id,
-        "created_at": time.monotonic(),
-        "db_id": None,
-        "target": target,
-        "parts": parts,
-        "report_path": report_path,
-    }
-    SCAN_CACHE[scan_id] = scan_entry
+    scan_entry["target"] = target
+    scan_entry["parts"] = parts
+    scan_entry["report_path"] = build_report(target, parts)
+    scan_entry["created_at"] = time.monotonic()
+    SCAN_CACHE[scan_entry["scan_id"]] = scan_entry
     await _persist_scan(scan_entry)
-    return _build_scan_response(scan_id, scan_entry)
+    return _build_scan_response(scan_entry["scan_id"], scan_entry)
+
+
+async def _run_base_scan(req: ScanRequest) -> Dict[str, Any]:
+    target = str(req.url)
+    scan_entry = _create_scan_entry(target)
+    SCAN_CACHE[scan_entry["scan_id"]] = scan_entry
+    return await _execute_base_scan(req, scan_entry)
+
+
+async def _run_base_scan_job(job_id: str, req: ScanRequest):
+    job = BASE_SCAN_JOBS.get(job_id)
+    if not job:
+        return
+
+    scan_entry = SCAN_CACHE.get(job["scan_id"])
+    if not scan_entry:
+        job["status"] = "failed"
+        job["error"] = "scan_id expired before base scan started"
+        job["updated_at"] = time.monotonic()
+        return
+
+    try:
+        job["status"] = "running"
+        job["updated_at"] = time.monotonic()
+        scan_entry["created_at"] = time.monotonic()
+        await _execute_base_scan(req, scan_entry)
+        job["status"] = "completed"
+        job["error"] = None
+        job["updated_at"] = time.monotonic()
+    except Exception as exc:
+        job["status"] = "failed"
+        job["error"] = str(exc)
+        job["updated_at"] = time.monotonic()
+    finally:
+        BASE_SCAN_TASKS.pop(job_id, None)
+
+
+async def _enqueue_base_scan_job(req: ScanRequest) -> Dict[str, Any]:
+    target = str(req.url)
+    scan_entry = _create_scan_entry(target)
+    SCAN_CACHE[scan_entry["scan_id"]] = scan_entry
+
+    job_id = str(uuid.uuid4())
+    job = {
+        "job_id": job_id,
+        "scan_id": scan_entry["scan_id"],
+        "kind": "base_scan",
+        "status": "queued",
+        "error": None,
+        "created_at": time.monotonic(),
+        "updated_at": time.monotonic(),
+        "scanned_urls": [],
+    }
+    BASE_SCAN_JOBS[job_id] = job
+    BASE_SCAN_TASKS[job_id] = asyncio.create_task(_run_base_scan_job(job_id, req))
+    return _build_scan_response(scan_entry["scan_id"], scan_entry, job)
 
 
 def _find_active_sqlmap_job(scan_id: str) -> Optional[Dict[str, Any]]:
@@ -701,6 +811,7 @@ async def _enqueue_sqlmap_job(req: ScanRequest) -> Dict[str, Any]:
     job = {
         "job_id": job_id,
         "scan_id": req.scan_id,
+        "kind": "sqlmap",
         "status": "queued",
         "error": None,
         "created_at": time.monotonic(),
@@ -734,7 +845,23 @@ async def _enqueue_sqlmap_job(req: ScanRequest) -> Dict[str, Any]:
 async def api_scan_no_sqlmap(request: Request, req: ScanRequest):
     _cleanup_runtime_state()
     _enforce_request_access(request)
-    return await _run_base_scan(req)
+    return await _enqueue_base_scan_job(req)
+
+
+@app.get("/api/scan_no_sqlmap/{job_id}")
+async def api_scan_no_sqlmap_status(request: Request, job_id: str):
+    _cleanup_runtime_state()
+    _enforce_request_access(request)
+
+    job = BASE_SCAN_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Base scan job not found or expired.")
+
+    scan_entry = SCAN_CACHE.get(job["scan_id"])
+    if not scan_entry:
+        raise HTTPException(status_code=404, detail="Associated scan not found or expired.")
+
+    return _build_scan_response(job["scan_id"], scan_entry, job)
 
 
 @app.post("/api/scan_sqlmap")

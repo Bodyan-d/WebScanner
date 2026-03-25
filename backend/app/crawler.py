@@ -8,6 +8,34 @@ from .fetcher import Fetcher
 import logging
 
 logger = logging.getLogger(__name__)
+SKIPPED_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".ico",
+    ".pdf",
+    ".zip",
+    ".rar",
+    ".7z",
+    ".tar",
+    ".gz",
+    ".mp3",
+    ".mp4",
+    ".avi",
+    ".mov",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".eot",
+    ".css",
+    ".js",
+    ".map",
+    ".xml",
+    ".rss",
+}
 
 
 class Crawler:
@@ -18,6 +46,7 @@ class Crawler:
         self.fetcher = Fetcher(concurrency=concurrency)
         self.max_pages = max_pages
         self.seen = set()
+        self.queued = {self.base}
         self.found_forms = []
 
     def _same_domain(self, url):
@@ -45,6 +74,10 @@ class Crawler:
         parsed = urlparse(normalized)
         if parsed.scheme and parsed.scheme not in {"http", "https"}:
             return ""
+        lower_path = parsed.path.lower()
+        for suffix in SKIPPED_EXTENSIONS:
+            if lower_path.endswith(suffix):
+                return ""
         return normalized.split("#", 1)[0]
 
     async def _parse(self, html, current):
@@ -92,6 +125,7 @@ class Crawler:
                     continue
                 try:
                     resp = await self.fetcher.get(url)
+                    content_type = str(getattr(resp, "headers", {}).get("Content-Type", "")).lower()
                     text = await resp.text(errors="ignore")
                 except Exception as e:
                     logger.debug("fetch error %s %s", url, e)
@@ -99,9 +133,13 @@ class Crawler:
                     q.task_done()
                     continue
                 self.seen.add(url)
+                if content_type and "html" not in content_type and "xml" not in content_type:
+                    q.task_done()
+                    continue
                 links = await self._parse(text, url)
                 for l in links:
-                    if self._same_domain(l) and l not in self.seen:
+                    if self._same_domain(l) and l not in self.seen and l not in self.queued:
+                        self.queued.add(l)
                         await q.put(l)
                 q.task_done()
 

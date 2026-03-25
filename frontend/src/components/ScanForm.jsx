@@ -2,7 +2,9 @@ import React, { useRef, useState } from "react";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
 const API_KEY = import.meta.env.VITE_API_KEY || "";
-const SQLMAP_POLL_INTERVAL_MS = 2000;
+const BASE_SCAN_POLL_INTERVAL_MS = 3000;
+const BASE_SCAN_POLL_MAX_ATTEMPTS = 900;
+const SQLMAP_POLL_INTERVAL_MS = 3000;
 const SQLMAP_POLL_MAX_ATTEMPTS = 600;
 
 function buildHeaders() {
@@ -43,6 +45,73 @@ export default function ScanForm({
 
   function isActiveRun(runId) {
     return activeRunRef.current === runId;
+  }
+
+  async function pollBaseScanJob(jobId, runId) {
+    for (let attempt = 0; attempt < BASE_SCAN_POLL_MAX_ATTEMPTS; attempt += 1) {
+      if (!isActiveRun(runId)) {
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE}/scan_no_sqlmap/${jobId}`, {
+        method: "GET",
+        headers: buildHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`base scan status failed ${response.status}: ${await response.text()}`);
+      }
+
+      const payload = await response.json();
+      if (!isActiveRun(runId)) {
+        return null;
+      }
+
+      const status = payload?.job?.status;
+      if (status === "completed") {
+        return payload;
+      }
+      if (status === "failed") {
+        throw new Error(payload?.job?.error || "base scan failed.");
+      }
+
+      await sleep(BASE_SCAN_POLL_INTERVAL_MS);
+    }
+
+    throw new Error("base scan polling timed out on the frontend.");
+  }
+
+  async function startBaseScan(targetUrl, safeMaxPages, safeConcurrency, runId) {
+    const response = await fetch(`${API_BASE}/scan_no_sqlmap`, {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify({
+        url: targetUrl,
+        max_pages: safeMaxPages,
+        concurrency: safeConcurrency,
+        run_sqlmap: false,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server ${response.status}: ${await response.text()}`);
+    }
+
+    const startPayload = await response.json();
+    if (!isActiveRun(runId)) {
+      return null;
+    }
+
+    const immediateStatus = startPayload?.job?.status;
+    const jobId = startPayload?.job?.job_id;
+    if (!jobId || immediateStatus === "completed") {
+      return startPayload;
+    }
+    if (immediateStatus === "failed") {
+      throw new Error(startPayload?.job?.error || "base scan failed.");
+    }
+
+    return await pollBaseScanJob(jobId, runId);
   }
 
   async function pollSqlmapJob(jobId, runId) {
@@ -168,22 +237,10 @@ export default function ScanForm({
 
       onBaseStart?.();
 
-      const resBase = await fetch(`${API_BASE}/scan_no_sqlmap`, {
-        method: "POST",
-        headers: buildHeaders(),
-        body: JSON.stringify({
-          url: normalizedUrl,
-          max_pages: safeMaxPages,
-          concurrency: safeConcurrency,
-          run_sqlmap: false,
-        }),
-      });
-
-      if (!resBase.ok) {
-        throw new Error(`Server ${resBase.status}: ${await resBase.text()}`);
+      const jsonBase = await startBaseScan(normalizedUrl, safeMaxPages, safeConcurrency, runId);
+      if (!jsonBase) {
+        return;
       }
-
-      const jsonBase = await resBase.json();
       onBaseDone?.(jsonBase);
 
       if (!runSqlmap) {

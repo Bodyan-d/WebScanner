@@ -9,6 +9,9 @@ WebScanner is meant for quick, controlled audits of web applications. It can:
 - crawl pages within the same domain,
 - collect forms and basic metadata,
 - scan common TCP ports,
+- detect services and versions on open ports,
+- enrich open ports with CVE matches from NVD and Vulnerability Lookup,
+- score port risk from CVSS bands such as `9.8 -> Critical` and `7.5 -> High`,
 - inspect HTTP security headers,
 - run reflected XSS heuristics,
 - run lightweight SQLi differential checks,
@@ -26,6 +29,7 @@ The branch now includes:
 - fixed `sqlmap` timeout handling and DB update after the `sqlmap` stage,
 - background `sqlmap` jobs with polling instead of one long blocking HTTP request,
 - faster scan orchestration: ports, headers, crawl, XSS, and basic SQLi now do less serial waiting,
+- a richer Ports tab with service detection, CVE mapping, and expandable risk details,
 - better XSS and SQLi heuristics with fewer false positives,
 - a new `GET /api/health` endpoint,
 - a backward-compatible `POST /api/scan` endpoint,
@@ -49,6 +53,7 @@ The branch now includes:
 │  │  ├─ port_scanner.py
 │  │  ├─ reporter.py
 │  │  ├─ sqli_tester.py
+│  │  ├─ vuln_lookup.py
 │  │  └─ xss_tester.py
 │  ├─ data/
 │  ├─ tests/
@@ -99,12 +104,34 @@ Important backend environment variables:
   API rate-limit window
 - `RATE_LIMIT_MAX_REQUESTS`
   API requests allowed per window per client
+- `STATUS_POLL_RATE_LIMIT_MAX_REQUESTS`
+  Separate per-window limit for background scan polling endpoints
 - `SCAN_CACHE_TTL_SECONDS`
   How long base scan results stay available for follow-up `sqlmap`
 - `SQLMAP_MAX_URLS`
   How many URLs from the crawl can be passed to `sqlmap`
 - `ENABLE_DOM_XSS`
   Enables Playwright-based DOM confirmation checks
+- `SERVICE_DETECTION_ENABLED`
+  Enables deeper service/version detection during the Ports scan
+- `ENABLE_PORT_VULN_LOOKUP`
+  Enables CVE enrichment for detected services
+- `PORT_SCAN_TIMEOUT_SECONDS`
+  Timeout used for banner probing and fallback port checks
+- `PORT_VULN_MAX_RESULTS`
+  Maximum CVE matches stored per port
+- `PORT_VULN_REQUEST_TIMEOUT_SECONDS`
+  Timeout for external vulnerability API calls
+- `PORT_VULN_LOOKUP_CONCURRENCY`
+  Concurrency used for port vulnerability lookups
+- `PORT_VULN_CACHE_TTL_SECONDS`
+  Cache TTL for repeated service-to-CVE lookups
+- `NVD_API_BASE`
+  Default: `https://services.nvd.nist.gov/rest/json/cves/2.0`
+- `NVD_API_KEY`
+  Optional NVD API key. Strongly recommended if you expect multiple scans or many open services.
+- `VULNERABILITY_LOOKUP_API_BASE`
+  Default: `https://vulnerability.circl.lu/api`
 
 Frontend environment variables:
 
@@ -165,7 +192,7 @@ Services:
 - Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8000`
 
-In Docker mode, nginx serves the frontend and proxies `/api` to the backend container. Reports are written to `./scan_results` through the mounted `/tmp/scan_reports` directory.
+In Docker mode, nginx serves the frontend and proxies `/api` to the backend container. Reports are written to `./scan_results` through the mounted `/tmp/scan_reports` directory. The backend image now also installs `nmap`, so service detection on the Ports tab works inside Docker out of the box.
 
 ## API Endpoints
 
@@ -178,13 +205,14 @@ Health check:
   "ok": true,
   "sqlmap_enabled": true,
   "cache_items": 0,
+  "base_scan_jobs": 0,
   "sqlmap_jobs": 0
 }
 ```
 
 ### `POST /api/scan_no_sqlmap`
 
-Runs the base scan only.
+Queues the base scan as a background job and returns immediately with a `job` object.
 
 ```json
 {
@@ -194,6 +222,10 @@ Runs the base scan only.
   "run_sqlmap": false
 }
 ```
+
+### `GET /api/scan_no_sqlmap/{job_id}`
+
+Polls base scan status until it becomes `completed` or `failed`.
 
 ### `POST /api/scan_sqlmap`
 
@@ -261,10 +293,48 @@ X-API-Key: your-shared-key
   },
   "parts": {
     "ports": {
-      "tcp": {
+      "ok": true,
+      "source": "nmap",
+      "ports": {
         "80": true,
-        "443": true
-      }
+        "443": true,
+        "22": false
+      },
+      "summary": {
+        "open_port_count": 2,
+        "highest_cvss": 9.8,
+        "highest_severity": "Critical",
+        "ports_with_vulnerabilities": 1
+      },
+      "items": [
+        {
+          "port": 80,
+          "protocol": "tcp",
+          "state": "open",
+          "open": true,
+          "service": {
+            "name": "http",
+            "product": "nginx",
+            "version": "1.28.2",
+            "detection": "nmap-sV"
+          },
+          "risk": {
+            "cve_count": 2,
+            "highest_cvss": 9.8,
+            "severity": "Critical"
+          },
+          "vulnerabilities": [
+            {
+              "id": "CVE-2024-12345",
+              "sources": ["nvd", "vulnerability-lookup"],
+              "cvss": 9.8,
+              "severity": "Critical",
+              "summary": "Example summary",
+              "link": "https://nvd.nist.gov/vuln/detail/CVE-2024-12345"
+            }
+          ]
+        }
+      ]
     },
     "crawl": {
       "urls": ["https://example.com", "https://example.com/login"],
@@ -307,7 +377,9 @@ Basic backend tests were added for:
 
 - SQLMap argument sanitization,
 - summary counting,
-- SQLMap output parsing.
+- SQLMap output parsing,
+- nmap service parsing,
+- CVSS-to-risk mapping.
 
 Run them with:
 
@@ -319,6 +391,10 @@ python -m pytest
 ## Notes
 
 - The frontend now expects `/api` by default, which works both with Vite proxy and nginx proxy.
+- Large base scans no longer depend on one long-lived nginx request. The frontend starts the scan, then polls `GET /api/scan_no_sqlmap/{job_id}` until the report is ready.
+- The Ports tab is now compact by default and expandable per port. Each row shows the port, detected service, highest risk band, and number of CVE matches; clicking the row opens full details.
+- CVE mapping is heuristic because it is based on detected service fingerprints, not a guaranteed asset inventory. Treat it as enrichment for triage, not as a formal proof that a host is vulnerable.
+- The scanner combines NVD and Vulnerability Lookup results and ranks each port by the highest matched CVSS score.
 - The frontend keeps the already loaded report visible while a follow-up `sqlmap` job is queued or running; only the `sqlmap` tab changes state.
 - Long `sqlmap` runs no longer rely on a single long-lived nginx request. The backend returns a job id immediately, and the frontend polls status updates.
 - If you want stricter protection, set `API_KEY` in the backend and `VITE_API_KEY` in the frontend.
