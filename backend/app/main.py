@@ -60,7 +60,7 @@ SQLMAP_TASKS: Dict[str, asyncio.Task[Any]] = {}
 RATE_LIMITS: Dict[str, Deque[float]] = defaultdict(deque)
 
 
-def sanitize_sqlmap_args(args: Optional[List[str]]) -> Optional[List[str]]:
+def sanitize_sqlmap_args(args):
     if not args:
         return None
 
@@ -455,7 +455,7 @@ def _select_sqlmap_targets(target: str, crawl_res: Any, forms: List[Any]) -> Lis
     return deduped[:SQLMAP_MAX_URLS]
 
 
-async def _scan_ports(host: str) -> Dict[str, Any]:
+async def _scan_ports(host) :
     try:
         nmap = await asyncio.to_thread(nmap_scan, host)
         if isinstance(nmap, dict) and nmap.get("ok"):
@@ -466,7 +466,7 @@ async def _scan_ports(host: str) -> Dict[str, Any]:
         return {"error": str(e)}
 
 
-async def _scan_headers(target: str) -> Dict[str, Any]:
+async def _scan_headers(target) :
     async with aiohttp.ClientSession() as session:
         return await check_headers(session, target)
 

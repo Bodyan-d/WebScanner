@@ -22,7 +22,7 @@ DEFAULT_XSS_PAYLOADS = [
 ]
 
 
-def _normalize_html(text: str) -> str:
+def _normalize_html(text):
     if not text:
         return ""
     text = re.sub(r"<script.*?>.*?</script>", "", text, flags=re.S | re.I)
@@ -383,7 +383,7 @@ class XSSTester:
         loop = asyncio.get_running_loop()
         tasks = []
 
-        def _normalize(raw: FormLike) -> Optional[Dict[str, Any]]:
+        def _normalize(raw: FormLike):
             try:
                 if isinstance(raw, dict):
                     return raw
