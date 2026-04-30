@@ -13,3 +13,4 @@ dotenv
 aiosqlite
 docker
 playwright
+pytest

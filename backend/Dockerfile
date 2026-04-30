@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
     curl \
     git \
+    nmap \
     wget \
     libnss3 \
     libatk1.0-0 \

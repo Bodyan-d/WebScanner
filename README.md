@@ -1,88 +1,65 @@
-# WebScanner — README (Polski)
+# WebScanner
 
-> Asynchroniczny skaner sieciowy do szybkiego audytu stron WWW
-> (crawling, nagłówki bezpieczeństwa, podstawowy XSS i SQLi, integracja z `sqlmap`)
+Asynchronous web security scanner with a FastAPI backend, React frontend, optional `sqlmap` integration, JSON reports, and SQLite history.
 
----
+## What The Project Does
 
-## Spis treści
+WebScanner is meant for quick, controlled audits of web applications. It can:
 
-1. [Opis projektu](#opis-projektu)
-2. [Funkcje](#funkcje)
-3. [Technologie](#technologie)
-4. [Struktura katalogów](#struktura-katalogów-przykład)
-5. [Szybkie uruchomienie — lokalnie](#szybkie-uruchomienie--lokalnie-dev)
-6. [Uruchomienie z Docker / docker-compose](#uruchomienie-z-docker--docker-compose)
-7. [Konfiguracja / zmienne środowiskowe](#konfiguracja--zmienne-%C5%9Brodowiskowe)
-8. [API — przykłady](#api--przyk%C5%82ady)
-9. [Format odpowiedzi — przykładowy wynik](#format-odpowiedzi--przyk%C5%82adowy-wynik)
+- crawl pages within the same domain,
+- collect forms and basic metadata,
+- scan common TCP ports,
+- detect services and versions on open ports,
+- enrich open ports with CVE matches from NVD and Vulnerability Lookup,
+- score port risk from CVSS bands such as `9.8 -> Critical` and `7.5 -> High`,
+- inspect HTTP security headers,
+- run reflected XSS heuristics,
+- run lightweight SQLi differential checks,
+- optionally launch deeper SQLi checks with `sqlmap`,
+- save reports to disk and summaries to SQLite.
 
+This is still a practical scanner for development and demo environments, not a replacement for a full penetration testing workflow.
 
+## Main Improvements In `some_updates`
 
----
+The branch now includes:
 
-## Opis projektu
+- safer backend defaults for DB, CORS, cache TTL, and report paths,
+- request throttling and optional API key protection,
+- fixed `sqlmap` timeout handling and DB update after the `sqlmap` stage,
+- background `sqlmap` jobs with polling instead of one long blocking HTTP request,
+- faster scan orchestration: ports, headers, crawl, XSS, and basic SQLi now do less serial waiting,
+- a richer Ports tab with service detection, CVE mapping, and expandable risk details,
+- better XSS and SQLi heuristics with fewer false positives,
+- a new `GET /api/health` endpoint,
+- a backward-compatible `POST /api/scan` endpoint,
+- frontend fixes for loading states, API base URL, result rendering, and keeping existing results visible during follow-up work,
+- cleanup of generated DB/report files from git,
+- a refreshed `README.md` and basic backend tests.
 
-**WebScanner** to asynchroniczna aplikacja (backend + frontend), która wykonuje audyt wybranej witryny [WWW](http://WWW). Główne zadania:
+## Project Structure
 
-* crawluje witrynę (zbiera linki i formularze),
-* skanuje porty (nmap lub proste skany TCP),
-* sprawdza nagłówki bezpieczeństwa (CSP, HSTS, Referrer-Policy itp.),
-* testuje podatności XSS (reflected) i wykonuje podstawowe testy SQLi,
-* opcjonalnie uruchamia `sqlmap` w kontenerze Docker dla głębszej analizy,
-* generuje raport i zapisuje wyniki w bazie danych.
-
-Projekt jest przeznaczony jako narzędzie do audytu i prototypowania — nie zastępuje pełnych testów penetracyjnych.
-
----
-
-## Funkcje
-
-* Asynchroniczny crawler oparty na `BeautifulSoup` (limit stron, ograniczenie do domeny).
-* Skan portów (nmap lub TCP scan fallback).
-* Kontrola nagłówków HTTP i lista brakujących nagłówków bezpieczeństwa.
-* XSS tester (reflected) z normalizacją HTML by zmniejszyć false-positives.
-* Prosty differential SQLi tester (porównuje odpowiedzi przy payloadach).
-* Integracja z `sqlmap` uruchamianym w kontenerze Docker (opcjonalnie, konfigurowalne argumenty).
-* Generacja raportu (plik + zapis w DB).
-* Frontend (React) z widokiem wyników podzielonych na zakładki.
-
----
-
-## Technologie
-
-* **Backend:** Python 3.11, FastAPI, aiohttp, asyncio, pathlib, urllib
-* **Parser HTML:** BeautifulSoup (lxml)
-* **Baza / ORM:** SQLAlchemy, databases
-* **Narzędzia zewnętrzne:** sqlmap (Docker)
-* **Frontend:** React (Vite)
-* **Orkiestracja:** Docker / docker-compose
-
----
-
-## Struktura katalogów (przykład)
-
-```
+```text
 .
 ├─ backend/
 │  ├─ app/
-|  |  ├─ __init__.py
-|  |  ├─ config.py
-│  │  ├─ main.py
+│  │  ├─ config.py
 │  │  ├─ crawler.py
-│  │  ├─ fetcher.py
-│  │  ├─ xss_tester.py
-│  │  ├─ sqli_tester.py
-│  │  ├─ port_scanner.py
-│  │  ├─ headers_checker.py
-│  │  ├─ reporter.py
 │  │  ├─ db.py
-│  │  └─ models.py
-|  ├─ data/
-|  |  ├─ scans.db
-|  ├─ Dockerfile
-|  ├─ init_db.sh
-|  ├─ db_init.sql
+│  │  ├─ fetcher.py
+│  │  ├─ headers_checker.py
+│  │  ├─ main.py
+│  │  ├─ models.py
+│  │  ├─ port_scanner.py
+│  │  ├─ reporter.py
+│  │  ├─ sqli_tester.py
+│  │  ├─ vuln_lookup.py
+│  │  └─ xss_tester.py
+│  ├─ data/
+│  ├─ tests/
+│  ├─ db_init.sql
+│  ├─ Dockerfile
+│  ├─ init_db.sh
 │  └─ requirements.txt
 ├─ frontend/
 │  ├─ src/
@@ -90,143 +67,349 @@ Projekt jest przeznaczony jako narzędzie do audytu i prototypowania — nie zas
 │  │  ├─ index.css
 │  │  ├─ main.jsx
 │  │  └─ components/
-│  |  │  ├─ Results.jsx
-│  |  │  ├─ ScanForm.jsx
-│  |  │  └─ Tabs.jsx
-│  ├─ package.json
-│  ├─ tailwind.config.js
-│  ├─ vite.config.js
+│  ├─ Dockerfile
 │  ├─ nginx.conf
-│  ├─ index.html
-│  └─ Dockerfile
-├─ scan_results/
-│  └─ report_[url]__[time/id].json
+│  ├─ package.json
+│  └─ vite.config.js
+├─ img/
 ├─ sqlmap/
 │  └─ Dockerfile
 └─ docker-compose.yml
 ```
 
----
+## Configuration
 
-## Szybkie uruchomienie — lokalnie (dev)
+Important backend environment variables:
+
+- `DATABASE_URL`
+  Default: SQLite database in `backend/data/scans.db`
+- `OUTPUT_DIR`
+  Local default: `backend/data/reports`
+  Docker compose default: `/tmp/scan_reports`
+- `USE_SQLMAP`
+  `true` or `false`
+- `SQLMAP_IMAGE`
+  Docker image used for `sqlmap`
+- `SQLMAP_CONTAINER_NAME`
+  Prefix for transient `sqlmap` containers
+- `MAX_PAGES_LIMIT`
+  Maximum crawl depth in pages
+- `MAX_CONCURRENCY`
+  Maximum API-accepted scan concurrency
+- `CORS_ALLOW_ORIGINS`
+  Comma-separated allowed origins
+- `API_KEY`
+  Optional shared key expected in `X-API-Key`
+- `RATE_LIMIT_WINDOW_SECONDS`
+  API rate-limit window
+- `RATE_LIMIT_MAX_REQUESTS`
+  API requests allowed per window per client
+- `STATUS_POLL_RATE_LIMIT_MAX_REQUESTS`
+  Separate per-window limit for background scan polling endpoints
+- `SCAN_CACHE_TTL_SECONDS`
+  How long base scan results stay available for follow-up `sqlmap`
+- `SQLMAP_MAX_URLS`
+  How many URLs from the crawl can be passed to `sqlmap`
+  Use `0` to allow all crawler URLs
+- `ENABLE_DOM_XSS`
+  Enables Playwright-based DOM confirmation checks
+- `SERVICE_DETECTION_ENABLED`
+  Enables deeper service/version detection during the Ports scan
+- `ENABLE_PORT_VULN_LOOKUP`
+  Enables CVE enrichment for detected services
+- `PORT_SCAN_TIMEOUT_SECONDS`
+  Timeout used for banner probing and fallback port checks
+- `PORT_VULN_MAX_RESULTS`
+  Maximum CVE matches stored per port
+- `PORT_VULN_REQUEST_TIMEOUT_SECONDS`
+  Timeout for external vulnerability API calls
+- `PORT_VULN_LOOKUP_CONCURRENCY`
+  Concurrency used for port vulnerability lookups
+- `PORT_VULN_CACHE_TTL_SECONDS`
+  Cache TTL for repeated service-to-CVE lookups
+- `NVD_API_BASE`
+  Default: `https://services.nvd.nist.gov/rest/json/cves/2.0`
+- `NVD_API_KEY`
+  Optional NVD API key. Strongly recommended if you expect multiple scans or many open services.
+- `VULNERABILITY_LOOKUP_API_BASE`
+  Default: `https://vulnerability.circl.lu/api`
+
+Frontend environment variables:
+
+- `VITE_API_URL`
+  Default: `/api`
+- `VITE_API_KEY`
+  Optional, forwarded as `X-API-Key`
+
+## Running Locally
 
 ### Backend
 
 ```bash
 cd backend
 python -m venv .venv
-# mac/linux
-source .venv/bin/activate
-# windows (powershell)
-# .venv\Scripts\Activate.ps1
+```
+
+Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Frontend (dev)
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Generated data:
+
+- SQLite DB: `backend/data/scans.db`
+- Reports: `backend/data/reports/`
+
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# budowa produkcyjna
-npm run build
 ```
 
----
+By default Vite runs on `http://localhost:5173` and proxies `/api` to `http://localhost:8000`.
 
-## Uruchomienie z Docker / docker-compose
-
-1. Zbuduj obrazy (w katalogu z `docker-compose.yml`):
+## Running With Docker Compose
 
 ```bash
 docker compose build
-```
-
-2. Uruchom kontenery:
-
-```bash
 docker compose up
 ```
 
-Dostęp:
+Services:
 
-* Frontend (nginx): `http://localhost:5173` (domyślnie mapowane `5173:80`)
-* Backend: `http://localhost:8000`
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000`
 
-**Uwaga**: jeśli frontend po buildzie wydaje się „stary”, upewnij się, że nie masz zamontowanego wolumenu, który nadpisuje `/usr/share/nginx/html` oraz wykonaj `docker compose up --build`.
+In Docker mode, nginx serves the frontend and proxies `/api` to the backend container. Reports are written to `./scan_results` through the mounted `/tmp/scan_reports` directory. The backend image now also installs `nmap`, so service detection on the Ports tab works inside Docker out of the box.
 
----
+## API Endpoints
 
-## Konfiguracja / zmienne środowiskowe
+### `GET /api/health`
 
-Najważniejsze zmienne (można przekazać przez `docker-compose` lub `.env`):
+Health check:
 
-* `USE_SQLMAP` — `true` / `false` — czy uruchamiać sqlmap
-* `SQLMAP_IMAGE` — obraz sqlmap (np. `spsproject-sqlmap:latest`)
-* `SQLMAP_CONTAINER_NAME` — (opcjonalnie) nazwa kontenera sqlmap
-* `MAX_PAGES_LIMIT`, `MAX_CONCURRENCY` — limity dla crawlera (ustaw w kodzie lub pliku konfiguracyjnym)
+```json
+{
+  "ok": true,
+  "sqlmap_enabled": true,
+  "cache_items": 0,
+  "base_scan_jobs": 0,
+  "sqlmap_jobs": 0
+}
+```
 
----
+### `POST /api/scan_no_sqlmap`
 
-## API — przykłady
-
-**Endpoint:** `POST /api/scan`
-
-**Body (JSON):**
+Queues the base scan as a background job and returns immediately with a `job` object.
 
 ```json
 {
   "url": "https://example.com",
-  "max_pages": 30,
-  "concurrency": 5,
-  "run_sqlmap": true,
-  "sqlmap_args": ["--level=1","--risk=1","--threads=5","--crawl=1"]
+  "max_pages": 25,
+  "concurrency": 3,
+  "run_sqlmap": false
 }
 ```
 
-**curl:**
+### `GET /api/scan_no_sqlmap/{job_id}`
 
-```bash
-curl -X POST "http://localhost:8000/api/scan" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com","max_pages":20,"concurrency":3,"run_sqlmap":false}'
-```
+Polls base scan status until it becomes `completed` or `failed`.
 
----
+### `POST /api/scan_sqlmap`
 
-## Format odpowiedzi — przykładowy wynik 
+Queues a background `sqlmap` job using an existing `scan_id`.
 
 ```json
 {
-  "report": "/tmp/scan_reports/report_http_example.com__20251109T....json",
+  "url": "https://example.com",
+  "scan_id": "previous-scan-id",
+  "run_sqlmap": true,
+  "sqlmap_args": ["--level=3", "--risk=2", "--threads=5", "--batch", "--random-agent"]
+}
+```
+
+The response returns immediately with a `job` object and `parts.sqlmap.status` set to `queued` or `running`.
+
+### `GET /api/scan_sqlmap/{job_id}`
+
+Polls background `sqlmap` status until it becomes `completed` or `failed`.
+
+Possible states:
+
+- `queued`
+- `running`
+- `completed`
+- `failed`
+
+### `POST /api/scan`
+
+Convenience endpoint that performs the base scan and, if requested, queues the follow-up `sqlmap` stage in the same request.
+
+```json
+{
+  "url": "https://example.com",
+  "max_pages": 25,
+  "concurrency": 3,
+  "run_sqlmap": true,
+  "sqlmap_args": ["--level=3", "--risk=2", "--threads=5"]
+}
+```
+
+### Optional API Key Header
+
+If `API_KEY` is configured on the backend, send:
+
+```text
+X-API-Key: your-shared-key
+```
+
+## Example Response Shape
+
+```json
+{
+  "scan_id": "0eab4f5d-...",
+  "target": "https://example.com",
+  "report": "/tmp/scan_reports/report_https_example.com_20260324T120000Z.json",
+  "job": {
+    "job_id": "4b43f2b7-...",
+    "scan_id": "0eab4f5d-...",
+    "status": "running",
+    "error": null,
+    "created_at": 12345.0,
+    "updated_at": 12350.0,
+    "scanned_urls": ["https://example.com/login?id=1"]
+  },
   "parts": {
-    "ports": { "tcp": { "80": true, "443": true } },
-    "crawl": { "urls": ["https://example.com/","https://example.com/search?..."], "forms": [["https://example.com/login", {"method":"post","inputs":{"user":"","pwd":""}}]] },
-    "headers": { "present": {...}, "missing": ["Content-Security-Policy","Strict-Transport-Security"] },
-    "xss": [ { "url":"...","param":"q","reflected":true,"similarity":0.89 } ],
-    "sqli": [ { "url":"...","param":"id","payload":"'","suspected":true } ],
-    "sqlmap": [ { "level":"CRITICAL","message":"...","detail":"..." } ]
+    "ports": {
+      "ok": true,
+      "source": "nmap",
+      "ports": {
+        "80": true,
+        "443": true,
+        "22": false
+      },
+      "summary": {
+        "open_port_count": 2,
+        "highest_cvss": 9.8,
+        "highest_severity": "Critical",
+        "ports_with_vulnerabilities": 1
+      },
+      "items": [
+        {
+          "port": 80,
+          "protocol": "tcp",
+          "state": "open",
+          "open": true,
+          "service": {
+            "name": "http",
+            "product": "nginx",
+            "version": "1.28.2",
+            "detection": "nmap-sV"
+          },
+          "risk": {
+            "cve_count": 2,
+            "highest_cvss": 9.8,
+            "severity": "Critical"
+          },
+          "vulnerabilities": [
+            {
+              "id": "CVE-2024-12345",
+              "sources": ["nvd", "vulnerability-lookup"],
+              "cvss": 9.8,
+              "severity": "Critical",
+              "summary": "Example summary",
+              "link": "https://nvd.nist.gov/vuln/detail/CVE-2024-12345"
+            }
+          ]
+        }
+      ]
+    },
+    "crawl": {
+      "urls": ["https://example.com", "https://example.com/login"],
+      "forms": [
+        [
+          "https://example.com/login",
+          {
+            "method": "post",
+            "inputs": {
+              "username": "",
+              "password": ""
+            },
+            "enctype": "application/x-www-form-urlencoded"
+          }
+        ]
+      ]
+    },
+    "headers": {
+      "present": {},
+      "missing": ["Content-Security-Policy"]
+    },
+    "xss": [],
+    "sqli": [],
+    "sqlmap": {
+      "status": "running",
+      "job_id": "4b43f2b7-...",
+      "ok": null,
+      "error": null,
+      "message": "sqlmap is running.",
+      "findings": [],
+      "scanned_urls": ["https://example.com/login?id=1"]
+    }
   }
 }
 ```
 
-## Sugestie rozwoju / roadmapa
+## Tests
 
-* Streaming wyników do frontendu (SSE / WebSocket) — przydatne jeśli sqlmap działa długo.
-* Lepszy parser sqlmap (CSV/JSON) i agregacja wykryć.
-* UI z historią skanów, eksportem (PDF/HTML) i filtrowaniem wyników.
-* Obsługa ciasteczek/sesji i formularzy logowania w crawlerze.
-* Testy jednostkowe (pytest) i CI.
+Basic backend tests were added for:
 
+- SQLMap argument sanitization,
+- summary counting,
+- SQLMap output parsing,
+- nmap service parsing,
+- CVSS-to-risk mapping.
 
+Run them with:
+
+```bash
+cd backend
+python -m pytest
+```
+
+## Notes
+
+- The frontend now expects `/api` by default, which works both with Vite proxy and nginx proxy.
+- Large base scans no longer depend on one long-lived nginx request. The frontend starts the scan, then polls `GET /api/scan_no_sqlmap/{job_id}` until the report is ready.
+- Base scan now arrives in stages: `ports + headers + crawl` first, then `port CVE enrichment + XSS + SQLi` continue in the background and fill the open tabs progressively.
+- The Ports tab is now compact by default and expandable per port. Each row shows the port, detected service, highest risk band, and number of CVE matches; clicking the row opens full details.
+- CVE mapping is heuristic because it is based on detected service fingerprints, not a guaranteed asset inventory. Treat it as enrichment for triage, not as a formal proof that a host is vulnerable.
+- The scanner combines NVD and Vulnerability Lookup results and ranks each port by the highest matched CVSS score.
+- `sqlmap` now accepts the full crawler URL set by default and prioritizes parameterized/form URLs first. Plain URLs fall back to lightweight crawl-assisted probing when needed.
+- The frontend keeps the already loaded report visible while a follow-up `sqlmap` job is queued or running; only the `sqlmap` tab changes state.
+- Long `sqlmap` runs no longer rely on a single long-lived nginx request. The backend returns a job id immediately, and the frontend polls status updates.
+- If you want stricter protection, set `API_KEY` in the backend and `VITE_API_KEY` in the frontend.
+- `sqlmap` runs are intentionally capped and sanitized to keep the app safer and more predictable.
 
 ![Image alt](./img/Screenshot%202026-01-07%20154022.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154739.png)
+![Image alt](./img/Screenshot%202026-04-30%20235026.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154746.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154751.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154800.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154805.png)
-![Image alt](./img/Screenshot%202026-01-07%20160118.png)
+![Image alt](./img/Screenshot%202026-04-30%20235502.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154814.png)
 ![Image alt](./img/Screenshot%202026-01-07%20155342.png)

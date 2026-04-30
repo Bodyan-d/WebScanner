@@ -12,7 +12,13 @@ services:
     environment:
       - USE_SQLMAP=true
       - SQLMAP_CONTAINER_NAME=sqlmap
-      - SQLMAP_IMAGE=spsproject-sqlmap:latest   
+      - SQLMAP_IMAGE=spsproject-sqlmap:latest
+      - OUTPUT_DIR=/tmp/scan_reports
+      - SERVICE_DETECTION_ENABLED=true
+      - ENABLE_PORT_VULN_LOOKUP=true
+      - NVD_API_BASE=https://services.nvd.nist.gov/rest/json/cves/2.0
+      - VULNERABILITY_LOOKUP_API_BASE=https://vulnerability.circl.lu/api
+      - CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
       - PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
     depends_on:
       - sqlmap

@@ -1,54 +1,116 @@
 import asyncio
-from urllib.parse import urlparse, urljoin
+from contextlib import suppress
+from urllib.parse import urljoin, urlparse
+
 from bs4 import BeautifulSoup
+
 from .fetcher import Fetcher
 import logging
+
 logger = logging.getLogger(__name__)
+SKIPPED_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".ico",
+    ".pdf",
+    ".zip",
+    ".rar",
+    ".7z",
+    ".tar",
+    ".gz",
+    ".mp3",
+    ".mp4",
+    ".avi",
+    ".mov",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".eot",
+    ".css",
+    ".js",
+    ".map",
+    ".xml",
+    ".rss",
+}
+
 
 class Crawler:
     def __init__(self, base_url, concurrency=3, max_pages=50):
-        self.base = base_url.rstrip('/')
+        self.base = base_url.rstrip("/")
         self.parsed = urlparse(self.base)
+        self.concurrency = max(1, concurrency)
         self.fetcher = Fetcher(concurrency=concurrency)
         self.max_pages = max_pages
         self.seen = set()
+        self.queued = {self.base}
         self.found_forms = []
+
     def _same_domain(self, url):
         try:
             p = urlparse(url)
-            return p.netloc == self.parsed.netloc or p.netloc == ''
-        except:
+            return p.netloc == self.parsed.netloc or p.netloc == ""
+        except Exception:
             return False
-        
+
     def _normalize(self, url):
-        if url.startswith('//'):
-            return f'{self.parsed.scheme}:{url}'
-        if url.startswith('/'):
-            return urljoin(self.base, url)
-        if not urlparse(url).scheme:
-            return urljoin(self.base+'/', url)
-        return url
-    
+        if not url:
+            return ""
+        url = url.strip()
+        if url.startswith(("#", "javascript:", "mailto:", "tel:")):
+            return ""
+        if url.startswith("//"):
+            normalized = f"{self.parsed.scheme}:{url}"
+        elif url.startswith("/"):
+            normalized = urljoin(self.base, url)
+        elif not urlparse(url).scheme:
+            normalized = urljoin(f"{self.base}/", url)
+        else:
+            normalized = url
+
+        parsed = urlparse(normalized)
+        if parsed.scheme and parsed.scheme not in {"http", "https"}:
+            return ""
+        lower_path = parsed.path.lower()
+        for suffix in SKIPPED_EXTENSIONS:
+            if lower_path.endswith(suffix):
+                return ""
+        return normalized.split("#", 1)[0]
+
     async def _parse(self, html, current):
         soup = BeautifulSoup(html, "lxml")
         links = set()
         for a in soup.find_all("a", href=True):
-            links.add(self._normalize(a['href']))
+            normalized = self._normalize(a["href"])
+            if normalized:
+                links.add(normalized)
         for form in soup.find_all("form"):
-            action = form.get('action') or current
+            action = form.get("action") or current
+            normalized_action = self._normalize(action) or current
             method = str(form.get("method") or "get").lower()
+            enctype = str(form.get("enctype") or "application/x-www-form-urlencoded").lower()
             inputs = {}
-            for i in form.find_all(['input','textarea','select']):
-                name = i.get('name')
-                if not name: continue
-                inputs[name] = i.get('value') or ''
-            self.found_forms.append((self._normalize(action), {'method':method,'inputs':inputs}))
+            for i in form.find_all(["input", "textarea", "select"]):
+                name = i.get("name")
+                if not name:
+                    continue
+                inputs[name] = i.get("value") or ""
+            self.found_forms.append(
+                (
+                    normalized_action,
+                    {"method": method, "inputs": inputs, "enctype": enctype},
+                )
+            )
         return links
-    
+
     async def crawl(self):
         q = asyncio.Queue()
         await q.put(self.base)
         workers = []
+
         async def worker():
             while True:
                 try:
@@ -63,22 +125,33 @@ class Crawler:
                     continue
                 try:
                     resp = await self.fetcher.get(url)
-                    text = await resp.text(errors='ignore')
+                    content_type = str(getattr(resp, "headers", {}).get("Content-Type", "")).lower()
+                    text = await resp.text(errors="ignore")
                 except Exception as e:
                     logger.debug("fetch error %s %s", url, e)
                     self.seen.add(url)
                     q.task_done()
                     continue
                 self.seen.add(url)
+                if content_type and "html" not in content_type and "xml" not in content_type:
+                    q.task_done()
+                    continue
                 links = await self._parse(text, url)
                 for l in links:
-                    if self._same_domain(l) and l not in self.seen:
+                    if self._same_domain(l) and l not in self.seen and l not in self.queued:
+                        self.queued.add(l)
                         await q.put(l)
                 q.task_done()
-        for _ in range(min(5, self.max_pages)):
+
+        for _ in range(max(1, min(self.concurrency, self.max_pages))):
             workers.append(asyncio.create_task(worker()))
+
         await q.join()
+
         for w in workers:
             w.cancel()
+            with suppress(asyncio.CancelledError):
+                await w
+
         await self.fetcher.close()
-        return {'urls': list(self.seen), 'forms': self.found_forms}
+        return {"urls": list(self.seen), "forms": self.found_forms}
