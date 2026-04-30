@@ -405,10 +405,11 @@ python -m pytest
 
 ![Image alt](./img/Screenshot%202026-01-07%20154022.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154739.png)
+![Image alt](./img/Screenshot%202026-04-30%20235026.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154746.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154751.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154800.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154805.png)
-![Image alt](./img/Screenshot%202026-01-07%20160118.png)
+![Image alt](./img/Screenshot%202026-04-30%20235502.png)
 ![Image alt](./img/Screenshot%202026-01-07%20154814.png)
 ![Image alt](./img/Screenshot%202026-01-07%20155342.png)
